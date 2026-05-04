@@ -316,40 +316,6 @@ Rules:
 - For achievements: extract specific results, numbers, or notable accomplishments`
 }
 
-function buildParseProfilePrompt(text) {
-  return `Parse the following text into a JSON profile object. The text may be a resume, LinkedIn bio, website about page, or any freeform description.
-
-INPUT TEXT:
-${text}
-
-Return ONLY valid JSON — no explanation, no markdown fences:
-{
-  "fullName": "Full name if found, else empty string",
-  "preferredName": "Nickname or brand name if found, else empty string",
-  "title": "Professional title (combine multiple roles with | separator)",
-  "company": "Primary company or business name",
-  "location": "City, Country",
-  "email": "Email if found, else empty string",
-  "phone": "Phone number if found, else empty string",
-  "websiteUrl": "Website URL if found, else empty string",
-  "portfolioUrl": "Portfolio URL if different from website, else empty string",
-  "linkedinUrl": "LinkedIn URL if found, else empty string",
-  "bio": "A first-person professional bio (2-4 sentences) summarizing who they are and what they do",
-  "toneOfVoice": "Describe their communication style based on the writing (2-3 sentences)",
-  "services": ["list", "of", "services", "or", "skills", "they", "offer"],
-  "tools": ["list", "of", "tools", "software", "or", "platforms"],
-  "achievements": ["key achievement 1", "key achievement 2", "key achievement 3"],
-  "targetClients": "Who they serve or want to serve",
-  "linkedinGoal": "Their professional goal — inferred from context"
-}
-
-Rules:
-- Leave fields as empty string or empty array if the info is not present
-- For services and tools: extract ALL mentions
-- For bio: write in first person
-- For achievements: extract specific results, numbers, or notable accomplishments`
-}
-
 function buildParseResumePrompt(resumeText) {
   return `Parse the following resume text into a structured JSON object for use in a resume management system.
 
@@ -1015,9 +981,6 @@ export default async function handler(req, res) {
         break
       case 'generateCaption':
         userMessage = buildCaptionPrompt(data.topic, profile)
-        break
-      case 'parseProfile':
-        userMessage = buildParseProfilePrompt(data.text)
         break
       case 'parseProfile':
         userMessage = buildParseProfilePrompt(data.text)
