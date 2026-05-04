@@ -200,21 +200,22 @@ export default function Layout({ activeTab, onTabChange, syncStatus, children })
             <div className="relative">
               <button
                 onClick={() => setCreditOpen(o => !o)}
-                className="hidden sm:flex items-center gap-2.5 px-3.5 py-1.5 rounded-full text-xs font-medium bg-white border border-gray-200 hover:border-gray-300 hover:shadow-sm transition-all"
+                className="hidden sm:flex items-center gap-2 px-3.5 py-1.5 rounded-full text-xs font-medium bg-white border border-gray-200 hover:border-gray-300 hover:shadow-sm transition-all"
                 title="Click to see API credit breakdown"
               >
+                <span className={`w-2 h-2 rounded-full flex-shrink-0 ${pct >= 85 ? 'bg-red-500' : pct >= 60 ? 'bg-yellow-400' : 'bg-green-500'}`} />
                 <span className="text-gray-500 font-medium">API Credits</span>
                 <div className="w-20 h-1.5 bg-gray-100 rounded-full overflow-hidden">
                   <div
                     className="h-full rounded-full transition-all duration-500"
                     style={{
-                      width: `${pct}%`,
+                      width: `${Math.max(2, pct)}%`,
                       background: pct >= 85 ? '#ef4444' : pct >= 60 ? 'linear-gradient(90deg,#22c55e,#eab308,#f97316)' : 'linear-gradient(90deg,#22c55e,#84cc16)',
                     }}
                   />
                 </div>
                 <span className={`font-bold ${pct >= 85 ? 'text-red-600' : pct >= 60 ? 'text-yellow-600' : 'text-green-600'}`}>
-                  ${totalCost.toFixed(3)} / ${budget}
+                  ${totalCost.toFixed(2)}/{budget}
                 </span>
               </button>
 
@@ -224,7 +225,7 @@ export default function Layout({ activeTab, onTabChange, syncStatus, children })
                   <div className="flex items-center justify-between mb-4">
                     <div>
                       <h3 className="font-bold text-gray-900 text-sm flex items-center gap-1.5">⚡ API Usage This Month</h3>
-                      <p className="text-xs text-gray-400 mt-0.5">Estimated cost based on Claude Sonnet token pricing · Resets {usage?.month ? `${usage.month.slice(0,3)} 1` : 'monthly'}</p>
+                      <p className="text-xs text-gray-400 mt-0.5">Estimated cost based on Claude Sonnet token pricing · Resets {new Date(new Date().getFullYear(), new Date().getMonth() + 1, 1).toLocaleDateString('en-US', { month: 'long', day: 'numeric' })}</p>
                     </div>
                     <button onClick={() => setCreditOpen(false)} className="text-gray-300 hover:text-gray-500 text-2xl leading-none w-7 h-7 flex items-center justify-center">×</button>
                   </div>
@@ -251,7 +252,7 @@ export default function Layout({ activeTab, onTabChange, syncStatus, children })
                     {[
                       { label: 'INPUT TOKENS',  value: `${((usage?.inputTokens  || 0) / 1000).toFixed(1)}K`, sub: `~$${((usage?.inputTokens||0)/1e6*3).toFixed(2)} at $3/MTok` },
                       { label: 'OUTPUT TOKENS', value: `${((usage?.outputTokens || 0) / 1000).toFixed(1)}K`, sub: `~$${((usage?.outputTokens||0)/1e6*15).toFixed(2)} at $15/MTok` },
-                      { label: 'API CALLS',     value: usage?.calls || 0,                                     sub: `since ${usage?.month || 'this month'}` },
+                      { label: 'API CALLS',     value: usage?.calls || 0,                                     sub: `since ${new Date().toLocaleDateString('en-US', { month: 'short', day: 'numeric' })}` },
                     ].map(s => (
                       <div key={s.label} className="bg-gray-50 rounded-xl p-3 text-center">
                         <div className="text-[9px] text-gray-400 font-semibold uppercase tracking-wider mb-1">{s.label}</div>
