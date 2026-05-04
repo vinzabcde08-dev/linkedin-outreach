@@ -1044,6 +1044,22 @@ export default async function handler(req, res) {
       return res.status(429).json({ error: 'Rate limit hit. Wait a moment and try again.' })
     }
 
+    // Credit balance exhausted — Anthropic returns 402 or a specific message
+    const msg = error.message || ''
+    const isOutOfCredits =
+      error.status === 402 ||
+      msg.toLowerCase().includes('credit') ||
+      msg.toLowerCase().includes('balance') ||
+      msg.toLowerCase().includes('billing') ||
+      msg.toLowerCase().includes('payment')
+
+    if (isOutOfCredits) {
+      return res.status(402).json({
+        error: 'OUT_OF_CREDITS',
+        message: 'Your Anthropic API credits are empty. Top up at console.anthropic.com/settings/billing to keep using the app.',
+      })
+    }
+
     return res.status(500).json({ error: error.message || 'Something went wrong with the AI request.' })
   }
 }
