@@ -166,10 +166,21 @@ After all messages, add a short section:
 [2–3 bullet points of tips for using this sequence — best times to send, what to personalize, what to watch for in their profile before sending]`
 }
 
-function buildReplyHandlerPrompt(replyText, context) {
+function buildReplyHandlerPrompt(replyText, context, prospect) {
+  const prospectBlock = prospect
+    ? `## PROSPECT DETAILS
+Name: ${prospect.name || prospect.firstName || 'Unknown'}
+Company: ${prospect.company || 'Unknown'}
+Title: ${prospect.title || 'Unknown'}
+LinkedIn Status: ${(prospect.status || 'unknown').replace(/_/g, ' ')}
+${prospect.notes ? `Notes: ${prospect.notes}` : ''}
+${prospect.industry ? `Industry: ${prospect.industry}` : ''}
+`
+    : ''
+
   return `My LinkedIn prospect replied to my outreach. Help me understand the reply and write the best response.
 
-## CONTEXT (what I sent them)
+${prospectBlock}## CONTEXT (what I sent them)
 ${context || 'Initial LinkedIn outreach / connection message.'}
 
 ## THEIR REPLY
@@ -968,7 +979,7 @@ export default async function handler(req, res) {
         userMessage = buildGenerateOutreachPrompt(data.brief, data.prospectName)
         break
       case 'handleReply':
-        userMessage = buildReplyHandlerPrompt(data.replyText, data.context)
+        userMessage = buildReplyHandlerPrompt(data.replyText, data.context, data.prospect || null)
         break
       case 'generateContent':
         userMessage = buildContentPlannerPrompt(profile, data.date)
