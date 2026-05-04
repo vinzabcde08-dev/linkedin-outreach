@@ -33,12 +33,17 @@ function getNextPendingStep(prospect) {
 }
 
 export default function Home() {
-  const [activeTab, setActiveTab] = useState('tracker')
+  const [mounted, setMounted]             = useState(false)
+  const [activeTab, setActiveTab]         = useState('tracker')
   const [currentProspect, setCurrentProspect] = useState(null)
-  const [showWelcome, setShowWelcome] = useState(false)
-  const [showReminder, setShowReminder] = useState(false)
+  const [showWelcome, setShowWelcome]     = useState(false)
+  const [showReminder, setShowReminder]   = useState(false)
   const [reminderProspects, setReminderProspects] = useState([])
-  const [syncStatus, setSyncStatus] = useState('syncing')
+  const [syncStatus, setSyncStatus]       = useState('syncing')
+
+  // Prevent SSR entirely — this app uses localStorage, Firebase, canvas, etc.
+  // Render a blank shell on the server; hydrate fully on the client.
+  useEffect(() => { setMounted(true) }, [])
 
   useEffect(() => {
     setSyncStatus('syncing')
@@ -81,6 +86,19 @@ export default function Home() {
   function handleTabChange(tab) {
     setActiveTab(tab)
   }
+
+  // Show blank page on server — full app renders after hydration
+  if (!mounted) return (
+    <>
+      <Head>
+        <title>Adsidi Client Generator</title>
+        <meta name="viewport" content="width=device-width, initial-scale=1" />
+      </Head>
+      <div style={{ display:'flex', height:'100vh', alignItems:'center', justifyContent:'center', background:'#F8FAFC' }}>
+        <div style={{ color:'#F97316', fontSize:'14px', fontWeight:600 }}>Loading Adsidi…</div>
+      </div>
+    </>
+  )
 
   return (
     <>
