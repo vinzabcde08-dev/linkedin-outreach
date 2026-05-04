@@ -111,6 +111,7 @@ My VA company, Adsidi Multimedia Services, is built on the belief that great tal
   targetClients: `Founders, CEOs, and business owners in the US and UK who are overwhelmed and need a reliable right-hand person. Real estate companies needing marketing operations support. Startups scaling their remote teams. Media companies and news organizations needing broadcast journalism training. Businesses that want to hire top Filipino talent for quality work at competitive rates. Any executive who's doing $5K–$50K/month and needs someone to handle the "everything else."`,
 
   monthlyBudget: 10,
+  anthropicBalance: 0,
 
   linkedinGoal: `Grow my client base for Adsidi Multimedia Services, position myself as the go-to Operations Lead and EA in the VA industry, and build a personal brand on LinkedIn as a Filipino entrepreneur, marketer, and trainer. I want to be known as someone who delivers results — not just another VA.`,
 
