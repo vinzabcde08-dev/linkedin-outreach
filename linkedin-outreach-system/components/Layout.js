@@ -1,5 +1,6 @@
 import { useState, useEffect } from 'react'
 import { getProfile, getUsage, calcCost } from '../lib/storage'
+import { outOfCredits, clearOutOfCredits } from '../lib/api'
 
 const NAV_GROUPS = [
   {
@@ -66,11 +67,12 @@ const TOOL_LABELS = {
 }
 
 export default function Layout({ activeTab, onTabChange, syncStatus, children }) {
-  const [sidebarOpen, setSidebarOpen] = useState(true)
-  const [creditOpen, setCreditOpen]   = useState(false)
+  const [sidebarOpen, setSidebarOpen]           = useState(true)
+  const [creditOpen, setCreditOpen]             = useState(false)
   const [usage, setUsage]                       = useState(null)
   const [budget, setBudget]                     = useState(10)
   const [anthropicBalance, setAnthropicBalance] = useState(0)
+  const [showCreditAlert, setShowCreditAlert]   = useState(false)
 
   const activeItem = ALL_ITEMS.find(i => i.id === activeTab)
 
@@ -80,6 +82,10 @@ export default function Layout({ activeTab, onTabChange, syncStatus, children })
     setUsage(u)
     setBudget(p?.monthlyBudget || 10)
     setAnthropicBalance(p?.anthropicBalance || 0)
+    // Check if out-of-credits flag was set by a previous API call
+    if (typeof window !== 'undefined') {
+      setShowCreditAlert(localStorage.getItem('adsidi_out_of_credits') === 'true')
+    }
   }, [activeTab])
 
   const totalCost = usage ? calcCost(usage.inputTokens || 0, usage.outputTokens || 0) : 0
@@ -90,22 +96,22 @@ export default function Layout({ activeTab, onTabChange, syncStatus, children })
     <div className="flex h-screen overflow-hidden bg-gray-50">
 
       {/* ── Sidebar ─────────────────────────────────────────── */}
-      <aside className={`flex flex-col bg-navy-900 transition-all duration-300 ${sidebarOpen ? 'w-64' : 'w-16'} flex-shrink-0`}>
+      <aside className={`flex flex-col bg-white border-r border-orange-100 shadow-sm transition-all duration-300 ${sidebarOpen ? 'w-64' : 'w-16'} flex-shrink-0`}>
 
         {/* Logo */}
-        <div className="flex items-center h-16 px-4 border-b border-white/10">
-          <div className="w-8 h-8 rounded-lg bg-brand-blue flex items-center justify-center flex-shrink-0 font-bold text-white text-sm">
+        <div className="flex items-center h-16 px-4 border-b border-orange-100">
+          <div className="w-8 h-8 rounded-xl bg-gradient-to-br from-orange-400 to-orange-600 flex items-center justify-center flex-shrink-0 font-bold text-white text-sm shadow-sm">
             A
           </div>
           {sidebarOpen && (
             <div className="ml-3 overflow-hidden">
-              <div className="text-white font-semibold text-sm leading-tight whitespace-nowrap">Adsidi</div>
-              <div className="text-white/40 text-xs whitespace-nowrap">Client Generator</div>
+              <div className="text-gray-900 font-bold text-sm leading-tight whitespace-nowrap">Adsidi</div>
+              <div className="text-orange-400 text-xs whitespace-nowrap font-medium">Client Generator</div>
             </div>
           )}
           <button
             onClick={() => setSidebarOpen(!sidebarOpen)}
-            className="ml-auto text-white/40 hover:text-white/80 transition-colors p-1 rounded"
+            className="ml-auto text-gray-300 hover:text-gray-600 transition-colors p-1 rounded"
             title={sidebarOpen ? 'Collapse sidebar' : 'Expand sidebar'}
           >
             <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -122,28 +128,28 @@ export default function Layout({ activeTab, onTabChange, syncStatus, children })
           {NAV_GROUPS.map(group => (
             <div key={group.label} className="mb-1">
               {sidebarOpen && (
-                <div className="px-5 pt-3 pb-1 text-white/30 text-[10px] font-semibold uppercase tracking-widest">
+                <div className="px-5 pt-3 pb-1 text-orange-300 text-[10px] font-bold uppercase tracking-widest">
                   {group.label}
                 </div>
               )}
-              {!sidebarOpen && <div className="border-t border-white/10 mx-2 my-2" />}
+              {!sidebarOpen && <div className="border-t border-orange-100 mx-2 my-2" />}
               <div className="px-2 space-y-0.5">
                 {group.items.map(item => (
                   <button
                     key={item.id}
                     onClick={() => onTabChange(item.id)}
-                    className={`w-full flex items-center gap-3 px-3 py-2.5 rounded-lg transition-all duration-150 text-left ${
+                    className={`w-full flex items-center gap-3 px-3 py-2.5 rounded-xl transition-all duration-150 text-left ${
                       activeTab === item.id
-                        ? 'bg-brand-blue text-white'
-                        : 'text-white/60 hover:text-white hover:bg-white/10'
+                        ? 'bg-gradient-to-r from-orange-500 to-orange-400 text-white shadow-sm'
+                        : 'text-gray-500 hover:text-gray-900 hover:bg-orange-50'
                     }`}
                     title={!sidebarOpen ? item.label : ''}
                   >
                     <span className="text-base flex-shrink-0 w-5 text-center">{item.icon}</span>
                     {sidebarOpen && (
                       <div className="overflow-hidden">
-                        <div className="text-sm font-medium leading-tight whitespace-nowrap">{item.label}</div>
-                        <div className={`text-xs leading-tight whitespace-nowrap ${activeTab === item.id ? 'text-white/70' : 'text-white/40'}`}>
+                        <div className="text-sm font-semibold leading-tight whitespace-nowrap">{item.label}</div>
+                        <div className={`text-xs leading-tight whitespace-nowrap ${activeTab === item.id ? 'text-orange-100' : 'text-gray-400'}`}>
                           {item.desc}
                         </div>
                       </div>
@@ -156,8 +162,8 @@ export default function Layout({ activeTab, onTabChange, syncStatus, children })
         </nav>
 
         {sidebarOpen && (
-          <div className="p-4 border-t border-white/10">
-            <div className="text-white/30 text-xs text-center">Powered by Claude AI</div>
+          <div className="p-4 border-t border-orange-100">
+            <div className="text-orange-300 text-xs text-center font-medium">Powered by Claude AI</div>
           </div>
         )}
       </aside>
@@ -313,11 +319,41 @@ export default function Layout({ activeTab, onTabChange, syncStatus, children })
             <div className="text-xs text-gray-400 hidden sm:block">
               {new Date().toLocaleDateString('en-US', { weekday: 'long', month: 'long', day: 'numeric', year: 'numeric' })}
             </div>
-            <div className="w-8 h-8 rounded-full bg-brand-blue flex items-center justify-center text-white text-xs font-bold">
+            <div className="w-8 h-8 rounded-full bg-gradient-to-br from-orange-400 to-orange-600 flex items-center justify-center text-white text-xs font-bold shadow-sm">
               A
             </div>
           </div>
         </header>
+
+        {/* ── Out-of-credits banner ── */}
+        {showCreditAlert && (
+          <div className="bg-red-600 text-white px-6 py-3 flex items-center justify-between flex-shrink-0">
+            <div className="flex items-center gap-3">
+              <span className="text-xl">🚨</span>
+              <div>
+                <p className="font-bold text-sm">Your Anthropic API credits are empty — the app cannot make AI requests.</p>
+                <p className="text-xs text-red-200 mt-0.5">Top up your balance to keep using all features.</p>
+              </div>
+            </div>
+            <div className="flex items-center gap-3 flex-shrink-0 ml-4">
+              <a
+                href="https://console.anthropic.com/settings/billing"
+                target="_blank"
+                rel="noopener noreferrer"
+                className="bg-white text-red-600 font-bold text-xs px-4 py-2 rounded-lg hover:bg-red-50 transition-colors"
+              >
+                Buy Credits →
+              </a>
+              <button
+                onClick={() => { clearOutOfCredits(); setShowCreditAlert(false) }}
+                className="text-red-200 hover:text-white text-xl leading-none"
+                title="Dismiss (click after topping up)"
+              >
+                ×
+              </button>
+            </div>
+          </div>
+        )}
 
         {/* Page content */}
         <main className="flex-1 overflow-y-auto p-6">
