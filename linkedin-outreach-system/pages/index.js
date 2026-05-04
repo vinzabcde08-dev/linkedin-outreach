@@ -1,18 +1,22 @@
 import { useState, useEffect } from 'react'
 import Head from 'next/head'
+import dynamic from 'next/dynamic'
 import Layout from '../components/Layout'
-import ProfileSetup from '../components/ProfileSetup'
-import ProspectAnalyzer from '../components/ProspectAnalyzer'
-import OutreachGenerator from '../components/OutreachGenerator'
-import ReplyHandler from '../components/ReplyHandler'
-import ContentPlanner from '../components/ContentPlanner'
-import ApplicationTracker from '../components/ApplicationTracker'
-import ResumeTailor from '../components/ResumeTailor'
-import ApplicationLetter from '../components/ApplicationLetter'
-import VideoScript from '../components/VideoScript'
-import PricingProposal from '../components/PricingProposal'
-import ClientBrief from '../components/ClientBrief'
 import { getProspects, getProspectsNeedingFollowUp, loadFromFirestore } from '../lib/storage'
+
+// All page components are client-only — they use localStorage, canvas, FileReader, etc.
+// ssr: false prevents Next.js from trying to render them in Node.js at build time.
+const ProfileSetup      = dynamic(() => import('../components/ProfileSetup'),      { ssr: false })
+const ProspectAnalyzer  = dynamic(() => import('../components/ProspectAnalyzer'),  { ssr: false })
+const OutreachGenerator = dynamic(() => import('../components/OutreachGenerator'), { ssr: false })
+const ReplyHandler      = dynamic(() => import('../components/ReplyHandler'),      { ssr: false })
+const ContentPlanner    = dynamic(() => import('../components/ContentPlanner'),    { ssr: false })
+const ApplicationTracker = dynamic(() => import('../components/ApplicationTracker'), { ssr: false })
+const ResumeTailor      = dynamic(() => import('../components/ResumeTailor'),      { ssr: false })
+const ApplicationLetter = dynamic(() => import('../components/ApplicationLetter'), { ssr: false })
+const VideoScript       = dynamic(() => import('../components/VideoScript'),       { ssr: false })
+const PricingProposal   = dynamic(() => import('../components/PricingProposal'),   { ssr: false })
+const ClientBrief       = dynamic(() => import('../components/ClientBrief'),       { ssr: false })
 
 const SEQUENCE_STEP_LABELS = {
   connection: '🤝 Connection Request',
