@@ -82,4 +82,4 @@ npm run dev
 
 ---
 
-Built by **Adsidi Multimedia Services** · Powered by Claude AI
+Built by **Adsidi Multimedia Services** · Powered by Claude AI.
