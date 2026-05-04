@@ -68,8 +68,9 @@ const TOOL_LABELS = {
 export default function Layout({ activeTab, onTabChange, syncStatus, children }) {
   const [sidebarOpen, setSidebarOpen] = useState(true)
   const [creditOpen, setCreditOpen]   = useState(false)
-  const [usage, setUsage]             = useState(null)
-  const [budget, setBudget]           = useState(10)
+  const [usage, setUsage]                       = useState(null)
+  const [budget, setBudget]                     = useState(10)
+  const [anthropicBalance, setAnthropicBalance] = useState(0)
 
   const activeItem = ALL_ITEMS.find(i => i.id === activeTab)
 
@@ -78,6 +79,7 @@ export default function Layout({ activeTab, onTabChange, syncStatus, children })
     const p = getProfile()
     setUsage(u)
     setBudget(p?.monthlyBudget || 10)
+    setAnthropicBalance(p?.anthropicBalance || 0)
   }, [activeTab])
 
   const totalCost = usage ? calcCost(usage.inputTokens || 0, usage.outputTokens || 0) : 0
@@ -267,11 +269,36 @@ export default function Layout({ activeTab, onTabChange, syncStatus, children })
                     </div>
                   )}
 
+                  {/* Actual Anthropic balance */}
+                  {anthropicBalance > 0 && (
+                    <div className="mb-4 bg-blue-50 rounded-xl p-3">
+                      <div className="text-xs font-semibold text-blue-700 mb-1.5">Anthropic Account Balance</div>
+                      <div className="flex items-end justify-between">
+                        <div>
+                          <div className="text-lg font-bold text-blue-800">${anthropicBalance.toFixed(2)}</div>
+                          <div className="text-xs text-blue-500">entered in Profile Setup</div>
+                        </div>
+                        <div className="text-right">
+                          <div className="text-sm font-semibold text-blue-700">
+                            ~${Math.max(0, anthropicBalance - totalCost).toFixed(2)} left
+                          </div>
+                          <div className="text-xs text-blue-500">after this month</div>
+                        </div>
+                      </div>
+                      <div className="mt-2 w-full h-1.5 bg-blue-100 rounded-full overflow-hidden">
+                        <div
+                          className="h-full bg-blue-400 rounded-full transition-all duration-500"
+                          style={{ width: `${Math.min(100, anthropicBalance > 0 ? (totalCost / anthropicBalance) * 100 : 0)}%` }}
+                        />
+                      </div>
+                    </div>
+                  )}
+
                   <div className="flex items-center justify-between pt-3 border-t border-gray-100">
                     <div className="text-xs text-gray-400">$3/MTok in · $15/MTok out</div>
-                    <a href="https://console.anthropic.com/usage" target="_blank" rel="noopener noreferrer"
+                    <a href="https://console.anthropic.com/settings/billing" target="_blank" rel="noopener noreferrer"
                        className="text-xs text-brand-blue hover:underline">
-                      Console →
+                      Billing →
                     </a>
                   </div>
                 </div>
