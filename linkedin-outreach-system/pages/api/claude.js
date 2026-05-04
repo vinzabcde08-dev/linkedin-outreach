@@ -867,7 +867,7 @@ LinkedIn: ${linkedinUrl || '(not recorded)'}
 Current status: ${status || '(not set)'}
 
 ## PROSPECT BRIEF / ANALYZER NOTES
-${briefSummary || '(No analyst brief on file — use what's available from conversation history and notes)'}
+${briefSummary || "(No analyst brief on file — use what's available from conversation history and notes)"}
 
 ## OUTREACH SEQUENCE HISTORY
 ${outreachSummary || '(No outreach messages on file)'}
