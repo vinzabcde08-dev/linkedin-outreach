@@ -4,6 +4,21 @@
 // ─────────────────────────────────────────────────────────────────────────────
 import { recordApiUsage } from './storage'
 
+// Global flag — set to true when Anthropic returns a credit error
+// Layout.js reads this to show the out-of-credits banner
+export let outOfCredits = false
+
+export function clearOutOfCredits() {
+  outOfCredits = false
+  if (typeof window !== 'undefined') {
+    localStorage.removeItem('adsidi_out_of_credits')
+  }
+}
+
+if (typeof window !== 'undefined') {
+  outOfCredits = localStorage.getItem('adsidi_out_of_credits') === 'true'
+}
+
 /**
  * Call the Claude API via /api/claude and auto-record token usage.
  * @param {string} feature  — matches a case in api/claude.js (e.g. 'generateOutreach')
@@ -19,6 +34,15 @@ export async function callClaude(feature, data, profile) {
   })
 
   const json = await res.json()
+
+  // ── Out of credits ──────────────────────────────────────────────────────────
+  if (res.status === 402 || json.error === 'OUT_OF_CREDITS') {
+    outOfCredits = true
+    if (typeof window !== 'undefined') {
+      localStorage.setItem('adsidi_out_of_credits', 'true')
+    }
+    throw new Error('OUT_OF_CREDITS')
+  }
 
   if (!res.ok) {
     throw new Error(json.error || `Request failed (${res.status})`)
