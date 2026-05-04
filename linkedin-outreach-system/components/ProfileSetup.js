@@ -372,17 +372,68 @@ export default function ProfileSetup({ onProfileSaved }) {
       )}
 
       {activeSection === 'goals' && (
-        <div className="card fade-in space-y-5">
-          <h3 className="font-semibold text-sm uppercase tracking-wide text-gray-500">Goals & Target Clients</h3>
-          <div>
-            <label className="label">Target Clients</label>
-            <p className="text-xs text-gray-400 mb-2">Who are you trying to reach on LinkedIn?</p>
-            <textarea className="textarea-field" rows={5} value={profile.targetClients || ''} onChange={e => handleChange('targetClients', e.target.value)} placeholder="Founders, CEOs, and business owners who are overwhelmed..." />
+        <div className="fade-in space-y-4">
+          <div className="card space-y-5">
+            <h3 className="font-semibold text-sm uppercase tracking-wide text-gray-500">Goals & Target Clients</h3>
+            <div>
+              <label className="label">Target Clients</label>
+              <p className="text-xs text-gray-400 mb-2">Who are you trying to reach on LinkedIn?</p>
+              <textarea className="textarea-field" rows={5} value={profile.targetClients || ''} onChange={e => handleChange('targetClients', e.target.value)} placeholder="Founders, CEOs, and business owners who are overwhelmed..." />
+            </div>
+            <div>
+              <label className="label">LinkedIn Goal</label>
+              <p className="text-xs text-gray-400 mb-2">What are you trying to achieve with LinkedIn outreach?</p>
+              <textarea className="textarea-field" rows={4} value={profile.linkedinGoal || ''} onChange={e => handleChange('linkedinGoal', e.target.value)} placeholder="Grow client base, build personal brand as a Filipino entrepreneur..." />
+            </div>
           </div>
-          <div>
-            <label className="label">LinkedIn Goal</label>
-            <p className="text-xs text-gray-400 mb-2">What are you trying to achieve with LinkedIn outreach?</p>
-            <textarea className="textarea-field" rows={4} value={profile.linkedinGoal || ''} onChange={e => handleChange('linkedinGoal', e.target.value)} placeholder="Grow client base, build personal brand as a Filipino entrepreneur..." />
+
+          {/* API Credit Tracking */}
+          <div className="card space-y-4">
+            <div className="flex items-center gap-2">
+              <span className="text-base">⚡</span>
+              <h3 className="font-semibold text-sm uppercase tracking-wide text-gray-500">API Credit Tracking</h3>
+            </div>
+            <p className="text-xs text-gray-400 -mt-2">These values power the credit pill in the top bar. Update your Anthropic balance whenever you buy credits at <a href="https://console.anthropic.com/settings/billing" target="_blank" rel="noopener noreferrer" className="text-blue-500 hover:underline">console.anthropic.com</a>.</p>
+
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+              <div>
+                <label className="label">Anthropic Account Balance (USD)</label>
+                <p className="text-xs text-gray-400 mb-2">Your current credit balance from the Anthropic console (e.g. 3.64)</p>
+                <div className="relative">
+                  <span className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400 text-sm font-medium">$</span>
+                  <input
+                    className="input-field pl-7"
+                    type="number"
+                    min="0"
+                    step="0.01"
+                    value={profile.anthropicBalance || ''}
+                    onChange={e => handleChange('anthropicBalance', parseFloat(e.target.value) || 0)}
+                    placeholder="3.64"
+                  />
+                </div>
+              </div>
+              <div>
+                <label className="label">Monthly Usage Budget (USD)</label>
+                <p className="text-xs text-gray-400 mb-2">Your personal spending limit per month (default: $10)</p>
+                <div className="relative">
+                  <span className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400 text-sm font-medium">$</span>
+                  <input
+                    className="input-field pl-7"
+                    type="number"
+                    min="1"
+                    step="1"
+                    value={profile.monthlyBudget || ''}
+                    onChange={e => handleChange('monthlyBudget', parseFloat(e.target.value) || 10)}
+                    placeholder="10"
+                  />
+                </div>
+              </div>
+            </div>
+
+            <div className="p-3 bg-blue-50 rounded-xl text-xs text-blue-700 flex gap-2">
+              <span>💡</span>
+              <span>After updating your balance, click <strong>Save Profile</strong> below. The credit pill in the header will reflect your actual Anthropic balance immediately.</span>
+            </div>
           </div>
         </div>
       )}
