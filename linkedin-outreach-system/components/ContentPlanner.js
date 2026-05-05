@@ -1,4 +1,4 @@
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import { getProfile, addContentBatch, getContentHistory } from '../lib/storage'
 import { callClaude } from '../lib/api'
 import CarouselGenerator from './CarouselGenerator'
@@ -48,6 +48,16 @@ export default function ContentPlanner() {
   const [history, setHistory] = useState(getContentHistory)
   const [showHistory, setShowHistory] = useState(false)
 
+  // Restore last session's ideas on mount so they survive tab switches
+  useEffect(() => {
+    try {
+      const savedRaw = localStorage.getItem('los_draft_content_raw')
+      const savedIdeas = localStorage.getItem('los_draft_content_ideas')
+      if (savedRaw) setRawResult(savedRaw)
+      if (savedIdeas) setIdeas(JSON.parse(savedIdeas))
+    } catch {}
+  }, [])
+
   async function handleGenerate() {
     setLoading(true)
     setError('')
@@ -65,6 +75,10 @@ export default function ContentPlanner() {
       const parsed = parseIdeas(text)
       setIdeas(parsed)
       setExpandedIdea(0)
+      try {
+        localStorage.setItem('los_draft_content_raw', text)
+        localStorage.setItem('los_draft_content_ideas', JSON.stringify(parsed))
+      } catch {}
 
       const batch = {
         date: today,
