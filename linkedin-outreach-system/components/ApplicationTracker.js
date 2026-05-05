@@ -4,6 +4,7 @@ import {
   markStepSent, markStepUnsent, addConversationEntry, deleteConversationEntry,
   exportAllData, importData,
 } from '../lib/storage'
+import { callClaude } from '../lib/api'
 
 const STATUSES = [
   { value: 'identified',    label: 'Identified',    color: 'bg-gray-100 text-gray-600',     dot: 'bg-gray-400' },
@@ -46,6 +47,10 @@ export default function ApplicationTracker() {
   // Conversation log inputs
   const [logInput, setLogInput] = useState({}) // prospectId_type → text
   const [showLogInput, setShowLogInput] = useState({}) // prospectId → 'received' | 'note' | null
+
+  // Auto-Research
+  const [researchLoading, setResearchLoading] = useState({}) // prospectId → bool
+  const [researchResult, setResearchResult] = useState({})   // prospectId → parsed JSON or error string
 
   useEffect(() => {
     setProspects(getProspects())
@@ -119,6 +124,62 @@ export default function ApplicationTracker() {
   function handleDeleteLogEntry(prospectId, entryId) {
     deleteConversationEntry(prospectId, entryId)
     refresh()
+  }
+
+  async function handleAutoResearch(prospect) {
+    if (!prospect.name) return
+    setResearchLoading(prev => ({ ...prev, [prospect.id]: true }))
+    setResearchResult(prev => ({ ...prev, [prospect.id]: null }))
+
+    try {
+      const raw = await callClaude('researchProspect', {
+        name: prospect.name,
+        company: prospect.company || '',
+      })
+
+      // Parse the JSON from the response
+      let parsed = null
+      try {
+        // Strip any markdown fences if Claude wrapped it
+        const clean = raw.replace(/```json\n?/gi, '').replace(/```\n?/g, '').trim()
+        parsed = JSON.parse(clean)
+      } catch {
+        setResearchResult(prev => ({ ...prev, [prospect.id]: { error: 'Could not parse research data. Raw:\n' + raw.slice(0, 300) } }))
+        return
+      }
+
+      setResearchResult(prev => ({ ...prev, [prospect.id]: parsed }))
+
+      // Auto-fill empty fields on the prospect — never overwrite existing data
+      const updates = {}
+      if (!prospect.email       && parsed.email)       updates.email       = parsed.email
+      if (!prospect.linkedinUrl && parsed.linkedinUrl) updates.linkedinUrl = parsed.linkedinUrl
+      if (!prospect.title       && parsed.title)       updates.title       = parsed.title
+      if (!prospect.company     && parsed.company)     updates.company     = parsed.company
+      if (!prospect.industry    && parsed.companyIndustry) updates.industry = parsed.companyIndustry
+      // Save a structured notes field with everything found
+      const noteLines = []
+      if (parsed.bio)           noteLines.push(`Bio: ${parsed.bio}`)
+      if (parsed.reportingTo)   noteLines.push(`Reports to: ${parsed.reportingTo}`)
+      if (parsed.companySize)   noteLines.push(`Company size: ${parsed.companySize}`)
+      if (parsed.recentActivity) noteLines.push(`Recent: ${parsed.recentActivity}`)
+      if (parsed.careerHistory)  noteLines.push(`Career: ${parsed.careerHistory}`)
+      if (noteLines.length > 0 && !prospect.notes) {
+        updates.notes = noteLines.join('\n')
+      }
+      // Always save the full research JSON as researchData
+      updates.researchData = parsed
+      updates.researchedAt = new Date().toISOString()
+
+      if (Object.keys(updates).length > 0) {
+        updateProspect(prospect.id, updates)
+        refresh()
+      }
+    } catch (e) {
+      setResearchResult(prev => ({ ...prev, [prospect.id]: { error: e.message } }))
+    } finally {
+      setResearchLoading(prev => ({ ...prev, [prospect.id]: false }))
+    }
   }
 
   function getTabForProspect(id) {
@@ -443,10 +504,11 @@ export default function ApplicationTracker() {
 
                     {/* CRM tabs */}
                     <div className="px-4 pt-3">
-                      <div className="flex gap-1 mb-3">
+                      <div className="flex gap-1 mb-3 flex-wrap">
                         {[
                           { key: 'sequence', label: '📬 Outreach Sequence', badge: hasSaved ? `${sent}/${total}` : null },
                           { key: 'log',      label: '💬 Conversation Log',  badge: convLog.length > 0 ? convLog.length : null },
+                          ...(p.brief ? [{ key: 'brief', label: '📋 Prospect Brief', badge: null }] : []),
                         ].map(tab => (
                           <button
                             key={tab.key}
@@ -691,8 +753,99 @@ export default function ApplicationTracker() {
                       )}
                     </div>
 
+                      {/* ── Brief tab ─── */}
+                      {activeTabKey === 'brief' && (
+                        <div className="pb-4" onClick={e => e.stopPropagation()}>
+                          {p.brief ? (
+                            <div>
+                              <div className="flex items-center justify-between mb-2">
+                                <span className="text-xs text-gray-400 font-medium">Generated by Prospect Analyzer · saved {p.updatedAt ? new Date(p.updatedAt).toLocaleDateString('en-US', { month: 'short', day: 'numeric' }) : ''}</span>
+                                <button
+                                  onClick={() => navigator.clipboard.writeText(p.brief)}
+                                  className="text-xs text-brand-blue hover:underline"
+                                >
+                                  📋 Copy brief
+                                </button>
+                              </div>
+                              <div className="bg-white border border-gray-200 rounded-xl p-4 text-xs text-gray-700 whitespace-pre-wrap leading-relaxed max-h-80 overflow-y-auto font-mono">
+                                {p.brief}
+                              </div>
+                            </div>
+                          ) : (
+                            <div className="text-center py-6 text-gray-400">
+                              <div className="text-2xl mb-2">📋</div>
+                              <p className="text-xs">No brief saved yet.</p>
+                              <p className="text-xs mt-1">Go to <strong>Prospect Analyzer</strong> → analyze → Save to Tracker.</p>
+                            </div>
+                          )}
+                        </div>
+                      )}
+                    </div>
+
+                    {/* Research results panel */}
+                    {researchResult[p.id] && (
+                      <div className="mx-4 mb-3 fade-in" onClick={e => e.stopPropagation()}>
+                        {researchResult[p.id].error ? (
+                          <div className="bg-red-50 border border-red-200 rounded-xl p-3 text-xs text-red-600">
+                            ⚠️ Research error: {researchResult[p.id].error}
+                          </div>
+                        ) : (
+                          <div className="bg-orange-50 border border-orange-200 rounded-xl p-4">
+                            <div className="flex items-center justify-between mb-3">
+                              <span className="text-xs font-bold text-orange-800">🔎 Research Results — {researchResult[p.id].confidence || 'unknown'} confidence</span>
+                              <button onClick={() => setResearchResult(prev => ({ ...prev, [p.id]: null }))} className="text-orange-400 hover:text-orange-600 text-sm">×</button>
+                            </div>
+                            <div className="grid grid-cols-2 gap-2 text-xs mb-3">
+                              {[
+                                { label: 'Email',    value: researchResult[p.id].email },
+                                { label: 'LinkedIn', value: researchResult[p.id].linkedinUrl },
+                                { label: 'Title',    value: researchResult[p.id].title },
+                                { label: 'Company',  value: researchResult[p.id].company },
+                                { label: 'Location', value: researchResult[p.id].location },
+                                { label: 'Seniority',value: researchResult[p.id].seniority },
+                                { label: 'Reports to',value: researchResult[p.id].reportingTo },
+                                { label: 'Company size', value: researchResult[p.id].companySize },
+                              ].filter(f => f.value).map(f => (
+                                <div key={f.label} className="bg-white rounded-lg p-2 border border-orange-100">
+                                  <div className="text-orange-400 font-semibold uppercase tracking-wide" style={{fontSize:'9px'}}>{f.label}</div>
+                                  <div className="text-gray-800 font-medium truncate mt-0.5">{f.value}</div>
+                                </div>
+                              ))}
+                            </div>
+                            {researchResult[p.id].bio && (
+                              <div className="bg-white rounded-lg p-3 border border-orange-100 mb-2">
+                                <div className="text-orange-400 font-semibold uppercase tracking-wide mb-1" style={{fontSize:'9px'}}>Bio</div>
+                                <div className="text-gray-700 text-xs leading-relaxed">{researchResult[p.id].bio}</div>
+                              </div>
+                            )}
+                            {researchResult[p.id].painPoints?.length > 0 && (
+                              <div className="bg-white rounded-lg p-3 border border-orange-100 mb-2">
+                                <div className="text-orange-400 font-semibold uppercase tracking-wide mb-1" style={{fontSize:'9px'}}>Pain Points</div>
+                                <ul className="space-y-0.5">
+                                  {researchResult[p.id].painPoints.map((pt, i) => (
+                                    <li key={i} className="text-xs text-gray-700">→ {pt}</li>
+                                  ))}
+                                </ul>
+                              </div>
+                            )}
+                            {researchResult[p.id].talkingPoints?.length > 0 && (
+                              <div className="bg-white rounded-lg p-3 border border-orange-100">
+                                <div className="text-orange-400 font-semibold uppercase tracking-wide mb-1" style={{fontSize:'9px'}}>Talking Points</div>
+                                <ul className="space-y-0.5">
+                                  {researchResult[p.id].talkingPoints.map((tp, i) => (
+                                    <li key={i} className="text-xs text-gray-700">💡 {tp}</li>
+                                  ))}
+                                </ul>
+                              </div>
+                            )}
+                            <p className="text-xs text-orange-600 mt-2 font-medium">✓ Empty fields have been auto-filled on this prospect.</p>
+                          </div>
+                        )}
+                      </div>
+                    )}
+
                     {/* Bottom action row */}
-                    <div className="flex gap-2 p-4 pt-2 border-t border-gray-100">
+                    <div className="flex gap-2 p-4 pt-2 border-t border-gray-100 flex-wrap">
                       <button onClick={(e) => { e.stopPropagation(); handleEdit(p) }} className="btn-secondary text-xs">
                         ✏️ Edit
                       </button>
@@ -706,6 +859,17 @@ export default function ApplicationTracker() {
                           🔗 LinkedIn
                         </a>
                       )}
+                      <button
+                        onClick={(e) => { e.stopPropagation(); handleAutoResearch(p) }}
+                        disabled={researchLoading[p.id]}
+                        className="btn-secondary text-xs flex items-center gap-1.5"
+                        title="Search the web to auto-fill email, LinkedIn, title, and more"
+                      >
+                        {researchLoading[p.id]
+                          ? <><span className="spinner border-gray-400 border-t-transparent w-3 h-3" />Researching…</>
+                          : '🔎 Auto-Research'
+                        }
+                      </button>
                       {confirmDelete === p.id ? (
                         <div className="flex items-center gap-2 ml-auto">
                           <span className="text-xs text-red-600">Delete this prospect?</span>
