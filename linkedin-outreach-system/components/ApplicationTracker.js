@@ -751,7 +751,6 @@ export default function ApplicationTracker() {
                           )}
                         </div>
                       )}
-                    </div>
 
                       {/* ── Brief tab ─── */}
                       {activeTabKey === 'brief' && (
