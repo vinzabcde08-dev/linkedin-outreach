@@ -44,7 +44,13 @@ export default function PricingProposal() {
   const [copied,           setCopied]            = useState('')
   const [saved,            setSaved]             = useState(false)
 
-  useEffect(() => { setProspects(getProspects()) }, [])
+  useEffect(() => {
+    setProspects(getProspects())
+    try {
+      const saved = localStorage.getItem('los_draft_proposal')
+      if (saved) setResult(saved)
+    } catch {}
+  }, [])
 
   function handleProspectSelect(id) {
     setProspectId(id)
@@ -90,6 +96,7 @@ export default function PricingProposal() {
       }
       const text = await callClaude('generatePricingProposal', data, profile)
       setResult(text)
+      try { localStorage.setItem('los_draft_proposal', text) } catch {}
     } catch (e) {
       setError(e.message)
     } finally {
