@@ -31,7 +31,13 @@ export default function VideoScript() {
   const [error,               setError]               = useState('')
   const [copied,              setCopied]              = useState('')
 
-  useEffect(() => { setProspects(getProspects()) }, [])
+  useEffect(() => {
+    setProspects(getProspects())
+    try {
+      const saved = localStorage.getItem('los_draft_videoscript')
+      if (saved) setResult(saved)
+    } catch {}
+  }, [])
 
   function handleProspectSelect(id) {
     setProspectId(id)
@@ -58,6 +64,7 @@ export default function VideoScript() {
         profile
       )
       setResult(text)
+      try { localStorage.setItem('los_draft_videoscript', text) } catch {}
       // Auto-save to prospect if one is selected
       if (prospectId) saveProspectDoc(prospectId, 'videoScript', text)
     } catch (e) {
