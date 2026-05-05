@@ -25,6 +25,7 @@ export default function ProspectAnalyzer({ onProspectAnalyzed }) {
       const text = await callClaude('analyzeProspect', { prospectInput: input }, profile)
       setResult(text)
       saveLastBrief({ text, input, analyzedAt: new Date().toISOString() })
+      try { localStorage.setItem('los_draft_analyzer', text) } catch {}
       if (onProspectAnalyzed) onProspectAnalyzed({ brief: text, input })
     } catch (e) {
       setError(e.message)
@@ -59,13 +60,20 @@ export default function ProspectAnalyzer({ onProspectAnalyzed }) {
     setTimeout(() => setSavedToTracker(false), 3000)
   }
 
-  // Extract name suggestion from result
+  // Extract name suggestion from result; restore draft on first mount
   useEffect(() => {
     if (result) {
       const nameMatch = result.match(/\*\*Name:\*\*\s*(.+)/i)
       if (nameMatch) setProspectName(nameMatch[1].trim())
     }
   }, [result])
+
+  useEffect(() => {
+    try {
+      const saved = localStorage.getItem('los_draft_analyzer')
+      if (saved) setResult(saved)
+    } catch {}
+  }, [])
 
   return (
     <div className="max-w-4xl mx-auto">
