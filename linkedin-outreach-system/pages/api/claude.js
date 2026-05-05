@@ -175,6 +175,7 @@ Title: ${prospect.title || 'Unknown'}
 LinkedIn Status: ${(prospect.status || 'unknown').replace(/_/g, ' ')}
 ${prospect.notes ? `Notes: ${prospect.notes}` : ''}
 ${prospect.industry ? `Industry: ${prospect.industry}` : ''}
+${prospect.brief ? `\n## PROSPECT BRIEF (from prior research)\n${prospect.brief}\n` : ''}
 `
     : ''
 
@@ -948,6 +949,49 @@ BRIEF WRITING RULES:
 - The talking points should feel like ${name}'s own voice, not sales coaching generic tips`
 }
 
+function buildResearchProspectPrompt(name, company) {
+  return `Search the web and find everything publicly available about this person. Run multiple searches if needed to fill in all the fields.
+
+PERSON: ${name}
+COMPANY: ${company || 'Unknown — try to find it'}
+
+Search for:
+1. Their LinkedIn profile URL (search "${name} LinkedIn" or "${name} ${company || ''} LinkedIn")
+2. Their email address or any public contact info
+3. Their exact job title and seniority level
+4. Their company: website, size, industry, what they do
+5. Career history: past roles and companies
+6. Reporting structure: who do they likely report to? Do they have a boss listed anywhere?
+7. Any recent news, posts, interviews, or public activity
+8. What pain points someone in this role typically has that ${name} could help with
+
+Return ONLY valid JSON — no markdown, no code fences, no explanation:
+{
+  "name": "full name as found",
+  "firstName": "first name only",
+  "lastName": "last name only",
+  "title": "exact job title or null",
+  "company": "company name or null",
+  "companyWebsite": "website URL or null",
+  "companyIndustry": "industry or null",
+  "companySize": "headcount estimate or range or null",
+  "email": "email address if publicly found or null",
+  "linkedinUrl": "full LinkedIn profile URL or null",
+  "location": "city / country or null",
+  "seniority": "IC / Manager / Director / VP / C-Suite / Founder or null",
+  "reportingTo": "their boss name or title if found, or null",
+  "directReports": "number of direct reports or null",
+  "bio": "2-3 sentence summary of who they are and what they do",
+  "careerHistory": "brief overview of past roles if found, or null",
+  "recentActivity": "latest news, posts, or public activity or null",
+  "painPoints": ["specific pain point 1", "specific pain point 2", "specific pain point 3"],
+  "talkingPoints": ["conversation angle 1", "conversation angle 2"],
+  "confidence": "high / medium / low",
+  "sourcesFound": ["source URL or description 1", "source URL 2"],
+  "notes": "anything else useful that doesn't fit above, or null"
+}`
+}
+
 // ─────────────────────────────────────────────────────────────────────────────
 // Main API handler
 // ─────────────────────────────────────────────────────────────────────────────
@@ -1023,6 +1067,53 @@ export default async function handler(req, res) {
       case 'generateClientBrief':
         userMessage = buildClientBriefPrompt(data, profile)
         break
+
+      case 'researchProspect': {
+        // Web-search loop — Anthropic executes searches server-side
+        const researchPrompt = buildResearchProspectPrompt(data.name, data.company)
+        let msgs = [{ role: 'user', content: researchPrompt }]
+        let finalText = ''
+        let totalIn = 0
+        let totalOut = 0
+
+        for (let iter = 0; iter < 8; iter++) {
+          const resp = await client.messages.create({
+            model: 'claude-sonnet-4-6',
+            max_tokens: 4096,
+            system: 'You are a professional research assistant. Search the web thoroughly and return ONLY valid JSON — no markdown fences, no explanation. Never refuse to research; if you can\'t find something, set that field to null.',
+            messages: msgs,
+            tools: [{ type: 'web_search_20250305', name: 'web_search' }],
+          }, {
+            headers: { 'anthropic-beta': 'web-search-2025-03-05' },
+          })
+
+          totalIn  += resp.usage?.input_tokens  || 0
+          totalOut += resp.usage?.output_tokens || 0
+
+          if (resp.stop_reason === 'end_turn') {
+            finalText = resp.content.filter(c => c.type === 'text').map(c => c.text).join('\n')
+            break
+          }
+
+          if (resp.stop_reason === 'tool_use') {
+            msgs.push({ role: 'assistant', content: resp.content })
+            // For Anthropic's built-in web_search, return empty content — Anthropic fills results
+            const toolResults = resp.content
+              .filter(c => c.type === 'tool_use')
+              .map(c => ({ type: 'tool_result', tool_use_id: c.id, content: [] }))
+            msgs.push({ role: 'user', content: toolResults })
+          } else {
+            finalText = resp.content.filter(c => c.type === 'text').map(c => c.text).join('\n')
+            break
+          }
+        }
+
+        return res.status(200).json({
+          result: finalText || '{}',
+          usage: { input_tokens: totalIn, output_tokens: totalOut },
+        })
+      }
+
       default:
         return res.status(400).json({ error: `Unknown feature: ${feature}` })
     }
