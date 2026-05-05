@@ -20,6 +20,11 @@ export default function ReplyHandler() {
     // Only show active prospects (not closed)
     const active = all.filter(p => !['closed_won', 'closed_lost'].includes(p.status))
     setProspects(active)
+    // Restore last analysis result
+    try {
+      const saved = localStorage.getItem('los_draft_reply')
+      if (saved) setResult(saved)
+    } catch {}
   }, [])
 
   function handleSelectProspect(id) {
@@ -63,6 +68,7 @@ export default function ReplyHandler() {
         profile
       )
       setResult(text)
+      try { localStorage.setItem('los_draft_reply', text) } catch {}
     } catch (e) {
       setError(e.message)
     } finally {
