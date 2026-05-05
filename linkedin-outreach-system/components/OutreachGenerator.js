@@ -26,7 +26,7 @@ export default function OutreachGenerator({ prospect }) {
   const [saveDone, setSaveDone] = useState(false)
   const [saveLoading, setSaveLoading] = useState(false)
 
-  // Load last brief on mount
+  // Load last brief + restore last generated result on mount
   useEffect(() => {
     if (prospect?.brief) {
       setBrief(prospect.brief)
@@ -35,6 +35,11 @@ export default function OutreachGenerator({ prospect }) {
       if (last?.text) setBrief(last.text)
     }
     setExistingProspects(getProspects())
+    // Restore last generated sequence so it survives tab switches
+    try {
+      const saved = localStorage.getItem('los_draft_outreach')
+      if (saved) setResult(saved)
+    } catch {}
   }, [prospect])
 
   // Reset save state when a new result is generated
@@ -60,6 +65,7 @@ export default function OutreachGenerator({ prospect }) {
       const profile = getProfile()
       const text = await callClaude('generateOutreach', { brief, prospectName: prospectName || 'the prospect' }, profile)
       setResult(text)
+      try { localStorage.setItem('los_draft_outreach', text) } catch {}
     } catch (e) {
       setError(e.message)
     } finally {
