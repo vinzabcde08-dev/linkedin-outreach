@@ -1,4 +1,4 @@
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import { getProfile, FULL_RESUME_DATA, getUploadedResume } from '../lib/storage'
 import { callClaude } from '../lib/api'
 
@@ -397,6 +397,14 @@ export default function ApplicationLetter() {
   const uploadedResume = getUploadedResume()
   const profile        = getProfile()
 
+  // Restore last letter on mount so it survives tab switches
+  useEffect(() => {
+    try {
+      const saved = localStorage.getItem('los_draft_appletter')
+      if (saved) setLetterText(saved)
+    } catch {}
+  }, [])
+
   // ── Step 1: Analyze the job post ─────────────────────────────────────────
   async function handleAnalyze() {
     if (!jobPost.trim()) {
@@ -456,6 +464,7 @@ export default function ApplicationLetter() {
         resumeData: baseResume,
       }, profile)
       setLetterText(text.trim())
+      try { localStorage.setItem('los_draft_appletter', text.trim()) } catch {}
     } catch (e) {
       setGenError(e.message)
     } finally {
@@ -489,6 +498,7 @@ export default function ApplicationLetter() {
     setGenError('')
     setShowPreview(false)
     setCopied(false)
+    try { localStorage.removeItem('los_draft_appletter') } catch {}
   }
 
   // ─────────────────────────────────────────────────────────────────────────
