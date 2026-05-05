@@ -13,7 +13,13 @@ export default function ClientBrief() {
   const [copied,       setCopied]       = useState('')
   const [saved,        setSaved]        = useState(false)
 
-  useEffect(() => { setProspects(getProspects()) }, [])
+  useEffect(() => {
+    setProspects(getProspects())
+    try {
+      const saved = localStorage.getItem('los_draft_clientbrief')
+      if (saved) setResult(saved)
+    } catch {}
+  }, [])
 
   const selectedProspect = prospects.find(p => p.id === prospectId) || null
 
@@ -44,6 +50,7 @@ export default function ClientBrief() {
       }
       const text = await callClaude('generateClientBrief', data, profile)
       setResult(text)
+      try { localStorage.setItem('los_draft_clientbrief', text) } catch {}
     } catch (e) {
       setError(e.message)
     } finally {
