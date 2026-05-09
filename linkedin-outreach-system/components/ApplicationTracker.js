@@ -36,7 +36,7 @@ const OUTREACH_CHANNELS = [
 const EMPTY_FORM = {
   name: '', company: '', title: '', linkedinUrl: '',
   status: 'identified', lastMessage: '', nextAction: '', notes: '', email: '',
-  outreachChannel: 'linkedin',
+  outreachChannel: 'linkedin', sourceGroup: '',
 }
 
 export default function ApplicationTracker() {
@@ -60,8 +60,17 @@ export default function ApplicationTracker() {
   const [researchLoading, setResearchLoading] = useState({}) // prospectId → bool
   const [researchResult, setResearchResult] = useState({})   // prospectId → parsed JSON or error string
 
+  // Groups
+  const [groups, setGroups] = useState([])
+  const [groupSearch, setGroupSearch] = useState({}) // groupIndex → search string
+  const [showGroupsSection, setShowGroupsSection] = useState(false)
+
   useEffect(() => {
     setProspects(getProspects())
+    try {
+      const stored = JSON.parse(localStorage.getItem('los_group_list') || '[]')
+      setGroups(stored)
+    } catch {}
   }, [])
 
   function refresh() {
@@ -353,6 +362,18 @@ export default function ApplicationTracker() {
                 {OUTREACH_CHANNELS.map(c => <option key={c.value} value={c.value}>{c.label}</option>)}
               </select>
             </div>
+            <div>
+              <label className="label">LinkedIn Group Source</label>
+              <select className="input-field" value={form.sourceGroup || ''} onChange={e => handleFormChange('sourceGroup', e.target.value)}>
+                <option value="">None / Direct search</option>
+                {groups.map((g, i) => (
+                  <option key={i} value={g.name}>{g.name}</option>
+                ))}
+              </select>
+              {groups.length === 0 && (
+                <p className="text-xs text-gray-400 mt-1">Add groups in Lead Discovery → Groups tab first.</p>
+              )}
+            </div>
           </div>
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 mt-4">
             <div>
@@ -465,6 +486,13 @@ export default function ApplicationTracker() {
                     ) : null
                   })()}
 
+                  {/* Group source badge */}
+                  {p.sourceGroup && (
+                    <span className="hidden sm:inline-flex items-center gap-1 text-xs px-2 py-0.5 rounded-full font-medium bg-emerald-100 text-emerald-700 flex-shrink-0 max-w-[120px]" title={`Via LinkedIn Group: ${p.sourceGroup}`}>
+                      🏘️ <span className="truncate">{p.sourceGroup}</span>
+                    </span>
+                  )}
+
                   {/* Status dropdown */}
                   <select
                     className={`text-xs font-medium px-2.5 py-1 rounded-full border-0 cursor-pointer ${statusStyle.color}`}
@@ -513,6 +541,27 @@ export default function ApplicationTracker() {
                           ))}
                         </div>
                       </div>
+
+                      {/* Group source (editable inline) */}
+                      {(p.sourceGroup || groups.length > 0) && (
+                        <div className="sm:col-span-2 flex items-center gap-3">
+                          <div className="font-medium text-gray-400 text-xs whitespace-nowrap">Group Source</div>
+                          <select
+                            className="input-field text-xs py-1 h-auto flex-1 max-w-xs"
+                            value={p.sourceGroup || ''}
+                            onChange={e => { updateProspect(p.id, { sourceGroup: e.target.value }); refresh() }}
+                            onClick={e => e.stopPropagation()}
+                          >
+                            <option value="">None / Direct search</option>
+                            {groups.map((g, i) => (
+                              <option key={i} value={g.name}>{g.name}</option>
+                            ))}
+                          </select>
+                          {p.sourceGroup && (
+                            <span className="text-xs text-emerald-600 font-medium whitespace-nowrap">🏘️ Via group</span>
+                          )}
+                        </div>
+                      )}
 
                       {p.linkedinUrl && (
                         <div>
@@ -939,6 +988,127 @@ export default function ApplicationTracker() {
       {/* Footer count */}
       <div className="mt-4 text-xs text-gray-400 text-center">
         Showing {filtered.length} of {prospects.length} prospects · Data saved in your browser
+      </div>
+
+      {/* ── LinkedIn Groups Section ── */}
+      <div className="mt-8 border-t border-gray-100 pt-6">
+        <button
+          onClick={() => setShowGroupsSection(v => !v)}
+          className="flex items-center gap-2 w-full text-left"
+        >
+          <span className="text-base font-bold text-gray-800">🏘️ LinkedIn Groups</span>
+          {groups.length > 0 && (
+            <span className="text-xs bg-emerald-100 text-emerald-700 px-2 py-0.5 rounded-full font-medium">
+              {groups.length} group{groups.length !== 1 ? 's' : ''}
+            </span>
+          )}
+          <span className="text-xs text-gray-400 ml-1">{showGroupsSection ? '▲ Hide' : '▼ Show'}</span>
+          <span className="text-xs text-gray-400 ml-auto font-normal">
+            {prospects.filter(p => p.sourceGroup).length} prospect{prospects.filter(p => p.sourceGroup).length !== 1 ? 's' : ''} linked to a group
+          </span>
+        </button>
+
+        {showGroupsSection && (
+          <div className="mt-4 space-y-4 fade-in">
+            {groups.length === 0 ? (
+              <div className="card text-center py-10 text-gray-400">
+                <div className="text-3xl mb-2">🏘️</div>
+                <p className="text-sm font-medium text-gray-600">No groups saved yet</p>
+                <p className="text-xs mt-1">Go to <strong>Lead Discovery → Groups</strong> tab to find LinkedIn groups to join.</p>
+              </div>
+            ) : (
+              groups.map((group, gi) => {
+                const groupProspects = prospects.filter(p => p.sourceGroup === group.name)
+                const searchVal = groupSearch[gi] || ''
+                const filtered2 = groupProspects.filter(p =>
+                  !searchVal ||
+                  (p.name || '').toLowerCase().includes(searchVal.toLowerCase()) ||
+                  (p.company || '').toLowerCase().includes(searchVal.toLowerCase())
+                )
+                return (
+                  <div key={gi} className="card border border-emerald-100">
+                    {/* Group header */}
+                    <div className="flex items-start justify-between gap-3 mb-3">
+                      <div>
+                        <div className="flex items-center gap-2">
+                          <span className="font-semibold text-gray-900 text-sm">🏘️ {group.name}</span>
+                          {group.isMember && (
+                            <span className="text-xs bg-green-100 text-green-700 px-2 py-0.5 rounded-full font-medium">✓ Member</span>
+                          )}
+                        </div>
+                        <div className="text-xs text-gray-400 mt-0.5">
+                          {group.members && <span>{group.members} members · </span>}
+                          <span className="font-medium text-emerald-600">{groupProspects.length} prospect{groupProspects.length !== 1 ? 's' : ''} reached out</span>
+                        </div>
+                        {group.whyJoin && (
+                          <div className="text-xs text-gray-500 mt-1 italic">{group.whyJoin}</div>
+                        )}
+                      </div>
+                      {group.linkedinUrl && (
+                        <a
+                          href={group.linkedinUrl.startsWith('http') ? group.linkedinUrl : `https://${group.linkedinUrl}`}
+                          target="_blank" rel="noopener noreferrer"
+                          className="btn-secondary text-xs flex-shrink-0"
+                        >
+                          🔗 Open Group
+                        </a>
+                      )}
+                    </div>
+
+                    {/* Prospects from this group */}
+                    {groupProspects.length === 0 ? (
+                      <div className="bg-gray-50 rounded-xl p-4 text-center text-xs text-gray-400">
+                        No prospects linked to this group yet. When you add a prospect and choose <strong>{group.name}</strong> as their group source, they'll appear here.
+                      </div>
+                    ) : (
+                      <div>
+                        {groupProspects.length > 3 && (
+                          <input
+                            className="input-field text-xs mb-2"
+                            placeholder={`Search ${groupProspects.length} prospects from this group…`}
+                            value={searchVal}
+                            onChange={e => setGroupSearch(prev => ({ ...prev, [gi]: e.target.value }))}
+                          />
+                        )}
+                        <div className="space-y-1.5">
+                          {filtered2.map(p => {
+                            const statusStyle = getStatusStyle(p.status)
+                            return (
+                              <div key={p.id} className="flex items-center gap-3 p-2.5 bg-gray-50 hover:bg-emerald-50 rounded-xl transition-colors">
+                                <div className="w-7 h-7 rounded-full bg-gradient-to-br from-brand-blue to-navy-800 flex items-center justify-center text-white font-bold text-xs flex-shrink-0">
+                                  {(p.name || '?').charAt(0).toUpperCase()}
+                                </div>
+                                <div className="flex-1 min-w-0">
+                                  <div className="font-semibold text-gray-900 text-xs truncate">{p.name}</div>
+                                  <div className="text-xs text-gray-400 truncate">{p.title}{p.company ? ` · ${p.company}` : ''}</div>
+                                </div>
+                                <span className={`text-xs px-2 py-0.5 rounded-full font-medium flex-shrink-0 ${statusStyle.color}`}>
+                                  {statusStyle.label}
+                                </span>
+                                <button
+                                  onClick={() => {
+                                    setExpandedRow(p.id)
+                                    window.scrollTo({ top: 0, behavior: 'smooth' })
+                                  }}
+                                  className="text-xs text-brand-blue hover:underline flex-shrink-0 font-medium"
+                                >
+                                  View →
+                                </button>
+                              </div>
+                            )
+                          })}
+                          {filtered2.length === 0 && searchVal && (
+                            <div className="text-xs text-gray-400 text-center py-2">No match for "{searchVal}"</div>
+                          )}
+                        </div>
+                      </div>
+                    )}
+                  </div>
+                )
+              })
+            )}
+          </div>
+        )}
       </div>
     </div>
   )
