@@ -26,9 +26,17 @@ const SEQUENCE_STEPS = [
   { key: 'followUp3',  label: 'Follow-Up 3',        icon: '🔁', tip: 'Day 14 — final' },
 ]
 
+const OUTREACH_CHANNELS = [
+  { value: 'linkedin', label: '🔗 LinkedIn',  color: 'bg-blue-100 text-blue-700' },
+  { value: 'email',    label: '📧 Email',     color: 'bg-yellow-100 text-yellow-700' },
+  { value: 'both',     label: '🔄 Both',      color: 'bg-purple-100 text-purple-700' },
+  { value: 'other',    label: '💬 Other',     color: 'bg-gray-100 text-gray-600' },
+]
+
 const EMPTY_FORM = {
   name: '', company: '', title: '', linkedinUrl: '',
   status: 'identified', lastMessage: '', nextAction: '', notes: '', email: '',
+  outreachChannel: 'linkedin',
 }
 
 export default function ApplicationTracker() {
@@ -339,6 +347,12 @@ export default function ApplicationTracker() {
                 {STATUSES.map(s => <option key={s.value} value={s.value}>{s.label}</option>)}
               </select>
             </div>
+            <div>
+              <label className="label">Outreach Channel</label>
+              <select className="input-field" value={form.outreachChannel || 'linkedin'} onChange={e => handleFormChange('outreachChannel', e.target.value)}>
+                {OUTREACH_CHANNELS.map(c => <option key={c.value} value={c.value}>{c.label}</option>)}
+              </select>
+            </div>
           </div>
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 mt-4">
             <div>
@@ -441,6 +455,16 @@ export default function ApplicationTracker() {
                     </div>
                   )}
 
+                  {/* Channel badge */}
+                  {p.outreachChannel && p.outreachChannel !== 'linkedin' && (() => {
+                    const ch = OUTREACH_CHANNELS.find(c => c.value === p.outreachChannel)
+                    return ch ? (
+                      <span className={`hidden sm:inline-flex items-center text-xs px-2 py-0.5 rounded-full font-medium flex-shrink-0 ${ch.color}`}>
+                        {ch.label}
+                      </span>
+                    ) : null
+                  })()}
+
                   {/* Status dropdown */}
                   <select
                     className={`text-xs font-medium px-2.5 py-1 rounded-full border-0 cursor-pointer ${statusStyle.color}`}
@@ -470,6 +494,26 @@ export default function ApplicationTracker() {
                   <div className="border-t border-gray-100 bg-gray-50 fade-in">
                     {/* Basic info strip */}
                     <div className="p-4 grid grid-cols-1 sm:grid-cols-2 gap-3 text-sm border-b border-gray-100">
+                      {/* Outreach channel (always show, editable) */}
+                      <div className="sm:col-span-2 flex items-center gap-3">
+                        <div className="font-medium text-gray-400 text-xs">Outreach Channel</div>
+                        <div className="flex gap-1.5 flex-wrap">
+                          {OUTREACH_CHANNELS.map(ch => (
+                            <button
+                              key={ch.value}
+                              onClick={e => { e.stopPropagation(); updateProspect(p.id, { outreachChannel: ch.value }); refresh() }}
+                              className={`text-xs px-2.5 py-1 rounded-full font-medium transition-all ${
+                                (p.outreachChannel || 'linkedin') === ch.value
+                                  ? ch.color + ' ring-2 ring-offset-1 ring-brand-blue/30'
+                                  : 'bg-gray-100 text-gray-500 hover:bg-gray-200'
+                              }`}
+                            >
+                              {ch.label}
+                            </button>
+                          ))}
+                        </div>
+                      </div>
+
                       {p.linkedinUrl && (
                         <div>
                           <div className="font-medium text-gray-400 text-xs mb-1">LinkedIn</div>
