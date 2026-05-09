@@ -9,10 +9,11 @@ const NAV_GROUPS = [
   {
     label: 'Pipeline',
     items: [
-      { id: 'tracker',  label: 'Prospect Hub',       icon: '📊', desc: 'Track all prospects' },
-      { id: 'prospect', label: 'Prospect Analyzer',  icon: '🔍', desc: 'Research & brief' },
-      { id: 'outreach', label: 'Outreach Generator', icon: '✉️',  desc: 'Messages & DMs' },
-      { id: 'reply',    label: 'Reply Handler',      icon: '💬', desc: 'Handle responses' },
+      { id: 'discovery', label: 'Lead Discovery',     icon: '🌐', desc: 'Find prospects online' },
+      { id: 'tracker',   label: 'Prospect Hub',       icon: '📊', desc: 'Track all prospects' },
+      { id: 'prospect',  label: 'Prospect Analyzer',  icon: '🔍', desc: 'Research & brief' },
+      { id: 'outreach',  label: 'Outreach Generator', icon: '✉️',  desc: 'Messages & DMs' },
+      { id: 'reply',     label: 'Reply Handler',      icon: '💬', desc: 'Handle responses' },
     ],
   },
   {
