@@ -1143,6 +1143,171 @@ Summarize everything you find in clear prose. Be specific — include URLs, name
         userMessage = buildClientBriefPrompt(data, profile)
         break
 
+      case 'findLinkedInGroups': {
+        // Search for real LinkedIn groups relevant to the user's target audience
+        const { query, industry: grpIndustry, location: grpLocation } = data
+        let totalIn = 0, totalOut = 0
+
+        const groupPrompt = `Find real, active LinkedIn groups that my target clients would be members of. I want to join these groups so I can message members directly without needing a connection request.
+
+MY TARGET AUDIENCE / SEARCH QUERY: ${query}
+${grpIndustry ? `Industry context: ${grpIndustry}` : ''}
+${grpLocation ? `Location context: ${grpLocation}` : ''}
+
+MY CONTEXT: I am a Philippines-based Operations Lead, Executive Assistant, Digital Marketer, and VA Company Founder. I'm looking to reach US and UK-based founders, CEOs, and business owners who might need my services.
+
+Search LinkedIn groups and find 8–12 real, active groups where my target audience hangs out. For each group:
+1. The exact group name as it appears on LinkedIn
+2. Approximate member count (search for it if needed)
+3. A brief description of what the group is about
+4. Why my target audience would be in this group
+5. The LinkedIn group URL if you can find it (format: linkedin.com/groups/XXXXXXX/)
+6. Why joining would help me reach these people
+
+Also search for: "[topic] LinkedIn group", "[industry] professionals LinkedIn", "[role] network LinkedIn group"
+
+Return ONLY a valid JSON array — no markdown, no explanation. Start with [ and end with ]:
+[
+  {
+    "name": "Exact LinkedIn Group Name",
+    "members": "e.g. 45,000 members or approximate",
+    "description": "What this group is about in 1-2 sentences",
+    "whyJoin": "Why this group is great for reaching your target audience specifically",
+    "linkedinUrl": "https://www.linkedin.com/groups/XXXXXXX/ or null if not found",
+    "activity": "active / moderate / low — based on post frequency if findable",
+    "targetFit": "high / medium — how well matched this is to your ICP"
+  }
+]
+
+Rules:
+- Find REAL LinkedIn groups that actually exist — verify by searching LinkedIn group URLs
+- Prioritize active groups (recent posts, large membership)
+- Mix: some niche groups (easier to stand out), some broad groups (bigger reach)
+- Include both industry groups AND role-specific groups AND general entrepreneur/founder groups`
+
+        let msgs = [{ role: 'user', content: groupPrompt }]
+        let finalText = ''
+
+        for (let iter = 0; iter < 8; iter++) {
+          const resp = await client.messages.create({
+            model: 'claude-sonnet-4-6',
+            max_tokens: 3000,
+            system: 'You are a LinkedIn growth expert and lead generation specialist. Search the web to find real, active LinkedIn groups. Return ONLY a valid JSON array starting with [.',
+            messages: msgs,
+            tools: [{ type: 'web_search_20250305', name: 'web_search' }],
+          }, { headers: { 'anthropic-beta': 'web-search-2025-03-05' } })
+
+          totalIn  += resp.usage?.input_tokens  || 0
+          totalOut += resp.usage?.output_tokens || 0
+
+          if (resp.stop_reason === 'end_turn') {
+            finalText = resp.content.filter(c => c.type === 'text').map(c => c.text).join('\n')
+            break
+          }
+          if (resp.stop_reason === 'tool_use') {
+            msgs.push({ role: 'assistant', content: resp.content })
+            const toolResults = resp.content
+              .filter(c => c.type === 'tool_use')
+              .map(c => ({ type: 'tool_result', tool_use_id: c.id, content: [] }))
+            msgs.push({ role: 'user', content: toolResults })
+          } else {
+            finalText = resp.content.filter(c => c.type === 'text').map(c => c.text).join('\n')
+            break
+          }
+        }
+
+        return res.status(200).json({
+          result: finalText || '[]',
+          usage: { input_tokens: totalIn, output_tokens: totalOut },
+        })
+      }
+
+      case 'discoverLeads': {
+        // Web-search loop — find real people matching the criteria
+        const { targetRole, industry, location, companySize, extraContext, numResults = 8 } = data
+        let totalIn = 0, totalOut = 0
+
+        const discoverPrompt = `I need to find real, named individuals on LinkedIn and online who match this profile. I want to reach out to them as potential clients for my VA/Operations/Digital Marketing services.
+
+TARGET PROFILE:
+- Role / Title looking for: ${targetRole}
+- Industry: ${industry || 'any'}
+- Location: ${location || 'United States'}
+- Company size: ${companySize || 'any size'}
+- Additional context: ${extraContext || 'none'}
+
+YOUR TASK:
+Search the web and find ${numResults} real, specific people who match this profile. For each person, find as many of these as possible:
+1. Full name and exact current job title
+2. Company name and website
+3. LinkedIn profile URL (search "[name] LinkedIn" or "[name] [company] LinkedIn")
+4. Email address (check company website contact pages, Twitter/X bios, personal sites, email pattern guessing from company domain)
+5. Location (city/state)
+6. Brief bio: what they do and what their company does
+
+Run multiple searches to find real verified individuals. Prioritize people with verifiable LinkedIn profiles. Do NOT invent people.
+
+Return ONLY a valid JSON array — no markdown, no explanation before or after. Start with [ and end with ]:
+[
+  {
+    "name": "Full Name",
+    "title": "Exact Job Title",
+    "company": "Company Name",
+    "linkedinUrl": "https://linkedin.com/in/handle or null",
+    "email": "email@domain.com or null",
+    "website": "https://company.com or null",
+    "location": "City, State / Country",
+    "bio": "2 sentences: who they are and what their company does",
+    "confidence": "high (verified LinkedIn found) / medium (found name+company but no LinkedIn) / low (limited info)",
+    "source": "brief note on where you found this person"
+  }
+]
+
+Rules:
+- Find REAL people — check that they actually exist and match the role
+- Mark confidence "high" only if you found their LinkedIn profile URL
+- Mark confidence "medium" if you found the person on company website/news but no LinkedIn
+- Mark confidence "low" if you're extrapolating
+- If you find fewer than ${numResults} verified matches, return fewer — quality over quantity
+- linkedinUrl must be the full profile URL (https://linkedin.com/in/...) or null, never a search page`
+
+        let msgs = [{ role: 'user', content: discoverPrompt }]
+        let finalText = ''
+
+        for (let iter = 0; iter < 10; iter++) {
+          const resp = await client.messages.create({
+            model: 'claude-sonnet-4-6',
+            max_tokens: 4096,
+            system: 'You are a professional lead researcher. Search the web thoroughly to find real named individuals matching the criteria. Return ONLY a valid JSON array starting with [ — no explanation, no markdown fences.',
+            messages: msgs,
+            tools: [{ type: 'web_search_20250305', name: 'web_search' }],
+          }, { headers: { 'anthropic-beta': 'web-search-2025-03-05' } })
+
+          totalIn  += resp.usage?.input_tokens  || 0
+          totalOut += resp.usage?.output_tokens || 0
+
+          if (resp.stop_reason === 'end_turn') {
+            finalText = resp.content.filter(c => c.type === 'text').map(c => c.text).join('\n')
+            break
+          }
+          if (resp.stop_reason === 'tool_use') {
+            msgs.push({ role: 'assistant', content: resp.content })
+            const toolResults = resp.content
+              .filter(c => c.type === 'tool_use')
+              .map(c => ({ type: 'tool_result', tool_use_id: c.id, content: [] }))
+            msgs.push({ role: 'user', content: toolResults })
+          } else {
+            finalText = resp.content.filter(c => c.type === 'text').map(c => c.text).join('\n')
+            break
+          }
+        }
+
+        return res.status(200).json({
+          result: finalText || '[]',
+          usage: { input_tokens: totalIn, output_tokens: totalOut },
+        })
+      }
+
       case 'researchProspect': {
         // Web-search loop — Anthropic executes searches server-side
         const researchPrompt = buildResearchProspectPrompt(data.name, data.company)
