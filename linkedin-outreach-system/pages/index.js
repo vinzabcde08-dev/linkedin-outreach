@@ -17,6 +17,7 @@ const ApplicationLetter = dynamic(() => import('../components/ApplicationLetter'
 const VideoScript       = dynamic(() => import('../components/VideoScript'),       { ssr: false })
 const PricingProposal   = dynamic(() => import('../components/PricingProposal'),   { ssr: false })
 const ClientBrief       = dynamic(() => import('../components/ClientBrief'),       { ssr: false })
+const LeadDiscovery     = dynamic(() => import('../components/LeadDiscovery'),     { ssr: false })
 
 const SEQUENCE_STEP_LABELS = {
   connection: '🤝 Connection Request',
@@ -184,6 +185,10 @@ export default function Home() {
 
       <Layout activeTab={activeTab} onTabChange={handleTabChange} syncStatus={syncStatus}>
         {/* All tabs mounted — CSS display hide/show keeps state & API calls alive across tab switches */}
+
+        <div style={{ display: activeTab === 'discovery' ? 'block' : 'none' }}>
+          <LeadDiscovery />
+        </div>
 
         <div style={{ display: activeTab === 'tracker' ? 'block' : 'none' }}>
           <ApplicationTracker />
