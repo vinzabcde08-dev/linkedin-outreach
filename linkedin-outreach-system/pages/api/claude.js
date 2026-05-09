@@ -74,14 +74,17 @@ Always write in ${name}'s voice. Every output should sound like it came from the
 // ─────────────────────────────────────────────────────────────────────────────
 // Feature prompt builders
 // ─────────────────────────────────────────────────────────────────────────────
-function buildAnalyzeProspectPrompt(prospectInput) {
-  return `Analyze this LinkedIn prospect profile and produce a detailed outreach brief for me.
+function buildAnalyzeProspectPrompt(prospectInput, webResearch = '') {
+  return `Analyze this LinkedIn prospect and produce a detailed outreach brief for me.
 
-## PROSPECT PROFILE / URL
+## PROSPECT PROFILE / TEXT PASTED BY USER
 ${prospectInput}
-
+${webResearch ? `
+## WEB RESEARCH (auto-gathered from the internet — use this to fill gaps and add detail)
+${webResearch}
+` : ''}
 ## YOUR TASK
-Research this person (use what's in the profile + your knowledge about their company/industry) and provide a structured brief with exactly these sections:
+Using ALL the information above (what the user pasted AND the web research), provide a structured brief with exactly these sections:
 
 ---
 ## 🧑 PROSPECT OVERVIEW
@@ -1016,9 +1019,81 @@ export default async function handler(req, res) {
     let userMessage = ''
 
     switch (feature) {
-      case 'analyzeProspect':
-        userMessage = buildAnalyzeProspectPrompt(data.prospectInput)
-        break
+      case 'analyzeProspect': {
+        const { prospectInput } = data
+        let webResearch = ''
+        let totalIn = 0
+        let totalOut = 0
+
+        // Step 1: Web search — supplement the pasted content with live internet data
+        try {
+          const searchPrompt = `The user is researching a LinkedIn prospect for sales outreach. Here is what they pasted:
+
+${prospectInput}
+
+Based on this, identify the person's name, company, and role. Then search the web comprehensively to find:
+1. Their LinkedIn profile URL (if not already a URL in the input)
+2. Their email address or any public contact info
+3. Their company: website, size, industry, what they sell, recent news, funding, or job listings
+4. Any recent posts, interviews, articles, podcasts, or public activity by this person
+5. Who they report to — their boss, CEO, or management chain if findable
+6. Their professional background / past roles
+7. Any pain points visible from their company's public presence (social media, reviews, job posts)
+
+Summarize everything you find in clear prose. Be specific — include URLs, names, dates where possible. If something can't be found, state that briefly.`
+
+          let msgs = [{ role: 'user', content: searchPrompt }]
+
+          for (let iter = 0; iter < 8; iter++) {
+            const resp = await client.messages.create({
+              model: 'claude-sonnet-4-6',
+              max_tokens: 3000,
+              system: 'You are a professional research assistant. Search the web thoroughly to find information about this prospect. Prioritize accuracy and specificity.',
+              messages: msgs,
+              tools: [{ type: 'web_search_20250305', name: 'web_search' }],
+            }, {
+              headers: { 'anthropic-beta': 'web-search-2025-03-05' },
+            })
+
+            totalIn  += resp.usage?.input_tokens  || 0
+            totalOut += resp.usage?.output_tokens || 0
+
+            if (resp.stop_reason === 'end_turn') {
+              webResearch = resp.content.filter(c => c.type === 'text').map(c => c.text).join('\n')
+              break
+            }
+            if (resp.stop_reason === 'tool_use') {
+              msgs.push({ role: 'assistant', content: resp.content })
+              const toolResults = resp.content
+                .filter(c => c.type === 'tool_use')
+                .map(c => ({ type: 'tool_result', tool_use_id: c.id, content: [] }))
+              msgs.push({ role: 'user', content: toolResults })
+            } else {
+              webResearch = resp.content.filter(c => c.type === 'text').map(c => c.text).join('\n')
+              break
+            }
+          }
+        } catch (e) {
+          console.error('Web search step failed, continuing without it:', e.message)
+        }
+
+        // Step 2: Full analysis with pasted content + web research combined
+        const analysisMsg = buildAnalyzeProspectPrompt(prospectInput, webResearch)
+        const analysisResp = await client.messages.create({
+          model: 'claude-sonnet-4-6',
+          max_tokens: 4096,
+          system: buildSystemPrompt(profile),
+          messages: [{ role: 'user', content: analysisMsg }],
+        })
+
+        totalIn  += analysisResp.usage?.input_tokens  || 0
+        totalOut += analysisResp.usage?.output_tokens || 0
+
+        return res.status(200).json({
+          result: analysisResp.content[0]?.text || '',
+          usage: { input_tokens: totalIn, output_tokens: totalOut },
+        })
+      }
       case 'generateOutreach':
         userMessage = buildGenerateOutreachPrompt(data.brief, data.prospectName)
         break
