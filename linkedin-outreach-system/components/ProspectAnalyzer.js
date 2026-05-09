@@ -5,6 +5,7 @@ import { callClaude } from '../lib/api'
 export default function ProspectAnalyzer({ onProspectAnalyzed }) {
   const [input, setInput] = useState('')
   const [loading, setLoading] = useState(false)
+  const [loadingStep, setLoadingStep] = useState(1) // 1 = searching web, 2 = analyzing
   const [result, setResult] = useState('')
   const [error, setError] = useState('')
   const [copied, setCopied] = useState(false)
@@ -17,6 +18,7 @@ export default function ProspectAnalyzer({ onProspectAnalyzed }) {
       return
     }
     setLoading(true)
+    setLoadingStep(1)
     setError('')
     setResult('')
 
@@ -80,7 +82,7 @@ export default function ProspectAnalyzer({ onProspectAnalyzed }) {
       <div className="mb-6">
         <h2 className="section-title">Prospect Analyzer</h2>
         <p className="section-subtitle">
-          Paste a LinkedIn URL or raw profile text. Claude will research the person and their company, identify pain points, and give you a full outreach brief.
+          Paste whatever you can — a URL, their name, profile text, or all of the above. Claude automatically searches the web for everything else (email, company, boss, recent activity) then writes your full outreach brief.
         </p>
       </div>
 
@@ -123,10 +125,15 @@ Built from $0 to $2M ARR with a team of 8...`}
             className="btn-primary min-w-[140px]"
           >
             {loading ? (
-              <>
-                <span className="spinner border-white border-t-transparent" />
-                Analyzing...
-              </>
+              <span className="flex flex-col items-center gap-0.5">
+                <span className="flex items-center gap-2">
+                  <span className="spinner border-white border-t-transparent" />
+                  {loadingStep === 1 ? '🌐 Searching the web...' : '📋 Writing brief...'}
+                </span>
+                <span className="text-[10px] text-white/60 font-normal">
+                  {loadingStep === 1 ? 'Step 1 of 2 — researching this person online' : 'Step 2 of 2 — generating your outreach brief'}
+                </span>
+              </span>
             ) : (
               '🔍 Analyze Prospect'
             )}
@@ -178,13 +185,13 @@ Built from $0 to $2M ARR with a team of 8...`}
       {/* Tips */}
       {!result && !loading && (
         <div className="card border-dashed bg-brand-blue-light/30 border-brand-blue/20">
-          <h3 className="font-semibold text-brand-blue text-sm mb-3">💡 How to get the best briefs</h3>
+          <h3 className="font-semibold text-brand-blue text-sm mb-3">💡 How it works</h3>
           <ul className="space-y-2 text-sm text-gray-600">
-            <li>→ <strong>Include their About section</strong> — it reveals goals, personality, and context</li>
-            <li>→ <strong>Add their recent posts</strong> — shows what they care about right now</li>
-            <li>→ <strong>Include company details</strong> — size, industry, recent announcements</li>
-            <li>→ <strong>Note their title and tenure</strong> — helps identify decision-making power</li>
-            <li>→ The more you paste, the more specific and actionable the brief will be</li>
+            <li>→ <strong>Paste anything</strong> — just their name + company is enough to start</li>
+            <li>→ <strong>Paste more for better results</strong> — their About section, recent posts, job title all help</li>
+            <li>→ <strong>Web search runs automatically</strong> — Claude will search for their email, LinkedIn, boss, company info, and recent activity</li>
+            <li>→ <strong>~30–45 seconds total</strong> — Step 1 searches the web, Step 2 writes your brief using everything found</li>
+            <li>→ <strong>After the brief</strong> — save to Prospect Hub and use Auto-Research there to fill in CRM fields automatically</li>
           </ul>
         </div>
       )}
