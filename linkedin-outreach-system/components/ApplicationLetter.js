@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react'
-import { getProfile, FULL_RESUME_DATA, getUploadedResume } from '../lib/storage'
+import { getProfile, FULL_RESUME_DATA, getUploadedResume, addApplication } from '../lib/storage'
 import { callClaude } from '../lib/api'
 
 // ─────────────────────────────────────────────────────────────────────────────
@@ -393,6 +393,7 @@ export default function ApplicationLetter() {
   const [copied, setCopied]               = useState(false)
   const [showPreview, setShowPreview]     = useState(false)
   const [activeSection, setActiveSection] = useState('checklist') // 'checklist' | 'research'
+  const [savedToHub, setSavedToHub]       = useState(false)
 
   const uploadedResume = getUploadedResume()
   const profile        = getProfile()
@@ -489,6 +490,28 @@ export default function ApplicationLetter() {
     setTimeout(() => URL.revokeObjectURL(url), 10000)
   }
 
+  function handleSaveToHub() {
+    const company  = parsedJob?.companyName || parsedJob?.employerProfile?.name || employerResearch?.companyName || ''
+    const role     = parsedJob?.roleTitle   || ''
+    const salary   = parsedJob?.salary      || employerResearch?.salary || ''
+    addApplication({
+      company,
+      role,
+      salary,
+      status:             'researching',
+      jobDescription:     jobPost,
+      parsedJob,
+      employerResearch,
+      coverLetter:        letterText || '',
+      applicationLink:    parsedJob?.applicationLink    || '',
+      applicationEmail:   parsedJob?.applicationEmail   || '',
+      checklistState:     {},
+      notes:              '',
+    })
+    setSavedToHub(true)
+    setTimeout(() => setSavedToHub(false), 4000)
+  }
+
   function handleReset() {
     setJobPost('')
     setParsedJob(null)
@@ -498,6 +521,7 @@ export default function ApplicationLetter() {
     setGenError('')
     setShowPreview(false)
     setCopied(false)
+    setSavedToHub(false)
     try { localStorage.removeItem('los_draft_appletter') } catch {}
   }
 
@@ -654,6 +678,27 @@ export default function ApplicationLetter() {
               )
           )}
 
+          {/* ── Save to Hub (available even before letter is generated) ── */}
+          <div className="flex items-center justify-between px-4 py-3 bg-indigo-50 border border-indigo-200 rounded-xl">
+            <div>
+              <p className="text-sm font-semibold text-indigo-800">💾 Save to Applications Hub</p>
+              <p className="text-xs text-indigo-600 mt-0.5">
+                Saves the job post, checklist, research{letterText ? ', and cover letter' : ' (generate a letter too for best results).'}
+              </p>
+            </div>
+            <button
+              onClick={handleSaveToHub}
+              disabled={savedToHub}
+              className={`text-sm font-semibold px-4 py-2 rounded-xl transition-all flex-shrink-0 ml-4 ${
+                savedToHub
+                  ? 'bg-green-100 text-green-700 border border-green-300 cursor-default'
+                  : 'bg-indigo-600 hover:bg-indigo-700 text-white shadow-sm'
+              }`}
+            >
+              {savedToHub ? '✓ Saved!' : '💾 Save to Hub'}
+            </button>
+          </div>
+
           {/* ── Generate Letter section ────────────────────────────────── */}
           {!letterText && (
             <div className="card border-brand-blue border-2 bg-blue-50">
@@ -720,6 +765,17 @@ export default function ApplicationLetter() {
                       style={{ background: '#1a56db' }}
                     >
                       🖨️ Open &amp; Print
+                    </button>
+                    <button
+                      onClick={handleSaveToHub}
+                      disabled={savedToHub}
+                      className={`text-sm font-semibold px-4 py-2 rounded-xl transition-all ${
+                        savedToHub
+                          ? 'bg-green-100 text-green-700 border border-green-300 cursor-default'
+                          : 'bg-indigo-600 hover:bg-indigo-700 text-white shadow-sm'
+                      }`}
+                    >
+                      {savedToHub ? '✓ Saved to Hub!' : '💾 Save to Applications Hub'}
                     </button>
                   </div>
                 </div>
