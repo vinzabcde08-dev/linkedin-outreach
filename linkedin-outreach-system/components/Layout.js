@@ -17,11 +17,17 @@ const NAV_GROUPS = [
     ],
   },
   {
+    label: 'Job Applications',
+    items: [
+      { id: 'appshub',   label: 'Applications Hub',   icon: '🗂️', desc: 'Track all applications' },
+      { id: 'appletter', label: 'Application Letter',  icon: '📝', desc: 'Cover letters' },
+      { id: 'resume',    label: 'Resume Tailor',       icon: '📄', desc: 'Tailor for each role' },
+    ],
+  },
+  {
     label: 'Materials',
     items: [
-      { id: 'resume',      label: 'Resume Tailor',      icon: '📄', desc: 'Tailor for each client' },
-      { id: 'appletter',   label: 'Application Letter', icon: '📝', desc: 'Cover letters' },
-      { id: 'videoscript', label: 'Video Script',       icon: '🎬', desc: 'Record-ready scripts' },
+      { id: 'videoscript', label: 'Video Script', icon: '🎬', desc: 'Record-ready scripts' },
     ],
   },
   {
