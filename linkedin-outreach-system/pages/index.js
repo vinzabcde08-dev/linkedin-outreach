@@ -12,6 +12,7 @@ const OutreachGenerator = dynamic(() => import('../components/OutreachGenerator'
 const ReplyHandler      = dynamic(() => import('../components/ReplyHandler'),      { ssr: false })
 const ContentPlanner    = dynamic(() => import('../components/ContentPlanner'),    { ssr: false })
 const ApplicationTracker = dynamic(() => import('../components/ApplicationTracker'), { ssr: false })
+const ApplicationsHub   = dynamic(() => import('../components/ApplicationsHub'),   { ssr: false })
 const ResumeTailor      = dynamic(() => import('../components/ResumeTailor'),      { ssr: false })
 const ApplicationLetter = dynamic(() => import('../components/ApplicationLetter'), { ssr: false })
 const VideoScript       = dynamic(() => import('../components/VideoScript'),       { ssr: false })
@@ -212,6 +213,10 @@ export default function Home() {
 
         <div style={{ display: activeTab === 'resume' ? 'block' : 'none' }}>
           <ResumeTailor />
+        </div>
+
+        <div style={{ display: activeTab === 'appshub' ? 'block' : 'none' }}>
+          <ApplicationsHub />
         </div>
 
         <div style={{ display: activeTab === 'appletter' ? 'block' : 'none' }}>
