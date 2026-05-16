@@ -33,6 +33,12 @@ export async function loadFromFirestore() {
       safeSet(KEYS.PROSPECTS, prospectsSnap.data().items)
     }
 
+    // Applications
+    const appsSnap = await getDoc(doc(db, 'app', 'applications'))
+    if (appsSnap.exists() && appsSnap.data().items) {
+      safeSet(KEYS.APPLICATIONS, appsSnap.data().items)
+    }
+
     // Content history
     const historySnap = await getDoc(doc(db, 'app', 'contentHistory'))
     if (historySnap.exists() && historySnap.data().items) {
@@ -52,6 +58,7 @@ export async function loadFromFirestore() {
 const KEYS = {
   PROFILE: 'los_profile',
   PROSPECTS: 'los_prospects',
+  APPLICATIONS: 'los_applications',
   CONTENT_HISTORY: 'los_content_history',
   LAST_BRIEF: 'los_last_brief',
   UPLOADED_RESUME: 'los_uploaded_resume',
@@ -272,6 +279,44 @@ export function getProspectsNeedingFollowUp() {
     const seq = p.outreachSequence || {}
     return steps.some(s => seq[s] && seq[s].text && seq[s].status === 'pending')
   })
+}
+
+// ── Applications (Applications Hub) ──────────────────────────────────────
+export function getApplications() {
+  return safeGet(KEYS.APPLICATIONS, [])
+}
+
+export function saveApplications(apps) {
+  safeSet(KEYS.APPLICATIONS, apps)
+  fsSet('app/applications', { items: apps, updatedAt: new Date().toISOString() })
+}
+
+export function addApplication(app) {
+  const apps = getApplications()
+  const newApp = {
+    id: Date.now().toString(),
+    createdAt: new Date().toISOString(),
+    updatedAt: new Date().toISOString(),
+    status: 'researching',
+    checklistState: {},
+    notes: '',
+    ...app,
+  }
+  saveApplications([newApp, ...apps])
+  return newApp
+}
+
+export function updateApplication(id, updates) {
+  const apps = getApplications()
+  const updated = apps.map(a =>
+    a.id === id ? { ...a, ...updates, updatedAt: new Date().toISOString() } : a
+  )
+  saveApplications(updated)
+}
+
+export function deleteApplication(id) {
+  const apps = getApplications()
+  saveApplications(apps.filter(a => a.id !== id))
 }
 
 // ── Last Brief (carried from Analyzer → Outreach Generator) ──────────────
@@ -516,6 +561,7 @@ export function exportAllData() {
     exportedAt: new Date().toISOString(),
     profile: getProfile(),
     prospects: getProspects(),
+    applications: getApplications(),
     contentHistory: getContentHistory(),
   }
 }
@@ -523,6 +569,7 @@ export function exportAllData() {
 export function importData(data) {
   if (data.profile) saveProfile(data.profile)
   if (data.prospects) saveProspects(data.prospects)
+  if (data.applications) saveApplications(data.applications)
   if (data.contentHistory) saveContentHistory(data.contentHistory)
 }
 
