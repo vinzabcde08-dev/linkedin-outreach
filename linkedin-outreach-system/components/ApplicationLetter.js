@@ -585,6 +585,81 @@ export default function ApplicationLetter() {
         </div>
       </div>
 
+      {/* ── Notes + Resume Link — always visible ────────────────────────── */}
+      <div className="space-y-2 mb-4">
+        {/* Notes for Claude — collapsible */}
+        <div className="border border-gray-200 rounded-xl overflow-hidden">
+          <button
+            type="button"
+            onClick={() => setShowNotes(p => !p)}
+            className="w-full flex items-center justify-between px-4 py-3 bg-gray-50 hover:bg-gray-100 transition-colors text-left"
+          >
+            <div className="flex items-center gap-2">
+              <span className="text-sm">📝</span>
+              <span className="text-sm font-semibold text-gray-700">Notes / Special Instructions for Claude</span>
+              {personalNotes.trim() && (
+                <span className="text-xs px-2 py-0.5 bg-purple-100 text-purple-700 rounded-full font-medium">Active</span>
+              )}
+            </div>
+            <span className="text-gray-400 text-xs">{showNotes ? '▲ hide' : '▼ show'}</span>
+          </button>
+          {showNotes && (
+            <div className="px-4 py-3 bg-white space-y-2 border-t border-gray-100">
+              <p className="text-xs text-gray-400">
+                Tell Claude specific things to include, avoid, or emphasize — e.g. "mention my football management experience", "keep it under 300 words", "emphasize I'm in the AU time zone".
+              </p>
+              <textarea
+                className="textarea-field text-sm"
+                rows={3}
+                value={personalNotes}
+                onChange={e => {
+                  setPersonalNotes(e.target.value)
+                  try { localStorage.setItem('los_appletter_notes', e.target.value) } catch {}
+                }}
+                placeholder="e.g. Mention my sports management background, keep it under 300 words, emphasize I'm already working in an AU time zone..."
+              />
+              <p className="text-xs text-gray-400 italic">Saved across sessions — applies to every letter you generate.</p>
+            </div>
+          )}
+        </div>
+
+        {/* Resume link — collapsible */}
+        <div className="border border-gray-200 rounded-xl overflow-hidden">
+          <button
+            type="button"
+            onClick={() => setShowResumeLink(p => !p)}
+            className="w-full flex items-center justify-between px-4 py-3 bg-gray-50 hover:bg-gray-100 transition-colors text-left"
+          >
+            <div className="flex items-center gap-2">
+              <span className="text-sm">🔗</span>
+              <span className="text-sm font-semibold text-gray-700">Resume Link</span>
+              {resumeLink.trim()
+                ? <span className="text-xs px-2 py-0.5 bg-green-100 text-green-700 rounded-full font-medium">Set — included in signature</span>
+                : <span className="text-xs px-2 py-0.5 bg-amber-100 text-amber-700 rounded-full font-medium">Not set</span>
+              }
+            </div>
+            <span className="text-gray-400 text-xs">{showResumeLink ? '▲ hide' : '▼ show'}</span>
+          </button>
+          {showResumeLink && (
+            <div className="px-4 py-3 bg-white space-y-2 border-t border-gray-100">
+              <p className="text-xs text-gray-400">
+                Link to your tailored resume (Google Drive, Notion, PDF, etc.). It will appear in the signature block of every generated letter.
+              </p>
+              <input
+                type="url"
+                className="input-field text-sm"
+                value={resumeLink}
+                onChange={e => setResumeLink(e.target.value)}
+                placeholder="https://drive.google.com/file/your-tailored-resume"
+              />
+              <p className="text-xs text-gray-400 italic">
+                Auto-filled from your Profile Setup portfolio URL. Change it here for a specific application.
+              </p>
+            </div>
+          )}
+        </div>
+      </div>
+
       {/* ── Job Post Input ───────────────────────────────────────────────── */}
       {!parsedJob && !analyzing && (
         <div className="card fade-in space-y-4">
@@ -600,78 +675,6 @@ export default function ApplicationLetter() {
               onChange={e => { setJobPost(e.target.value); setAnalyzeError('') }}
               placeholder={`Paste the full job post here...\n\nInclude everything:\n• Job description\n• Requirements\n• "To Apply" instructions\n• Application link or email\n• Questions they want answered\n• About the Employer section\n\nWorks with: OnlineJobs.ph, VirtualStaff.ph, Indeed, LinkedIn, Upwork, etc.`}
             />
-          </div>
-
-          {/* Notes for Claude — collapsible */}
-          <div className="border border-gray-200 rounded-xl overflow-hidden">
-            <button
-              type="button"
-              onClick={() => setShowNotes(p => !p)}
-              className="w-full flex items-center justify-between px-4 py-3 bg-gray-50 hover:bg-gray-100 transition-colors text-left"
-            >
-              <div className="flex items-center gap-2">
-                <span className="text-sm">📝</span>
-                <span className="text-sm font-semibold text-gray-700">Notes / Special Instructions for Claude</span>
-                {personalNotes.trim() && (
-                  <span className="text-xs px-2 py-0.5 bg-purple-100 text-purple-700 rounded-full font-medium">Active</span>
-                )}
-              </div>
-              <span className="text-gray-400 text-xs">{showNotes ? '▲ hide' : '▼ expand'}</span>
-            </button>
-            {showNotes && (
-              <div className="px-4 py-3 bg-white space-y-2">
-                <p className="text-xs text-gray-400">
-                  Tell Claude specific things to include, avoid, or emphasize — e.g. "mention my football management experience", "keep it under 300 words", "emphasize that I'm in the Australian time zone".
-                </p>
-                <textarea
-                  className="textarea-field text-sm"
-                  rows={3}
-                  value={personalNotes}
-                  onChange={e => {
-                    setPersonalNotes(e.target.value)
-                    try { localStorage.setItem('los_appletter_notes', e.target.value) } catch {}
-                  }}
-                  placeholder="e.g. Mention my sports management background, keep it under 300 words, emphasize I'm already working in an AU time zone..."
-                />
-                <p className="text-xs text-gray-400 italic">These notes are saved across sessions and applied to every letter you generate.</p>
-              </div>
-            )}
-          </div>
-
-          {/* Resume link — collapsible */}
-          <div className="border border-gray-200 rounded-xl overflow-hidden">
-            <button
-              type="button"
-              onClick={() => setShowResumeLink(p => !p)}
-              className="w-full flex items-center justify-between px-4 py-3 bg-gray-50 hover:bg-gray-100 transition-colors text-left"
-            >
-              <div className="flex items-center gap-2">
-                <span className="text-sm">🔗</span>
-                <span className="text-sm font-semibold text-gray-700">Tailored Resume Link</span>
-                {resumeLink.trim()
-                  ? <span className="text-xs px-2 py-0.5 bg-green-100 text-green-700 rounded-full font-medium">Set</span>
-                  : <span className="text-xs px-2 py-0.5 bg-amber-100 text-amber-700 rounded-full font-medium">Not set</span>
-                }
-              </div>
-              <span className="text-gray-400 text-xs">{showResumeLink ? '▲ hide' : '▼ expand'}</span>
-            </button>
-            {showResumeLink && (
-              <div className="px-4 py-3 bg-white space-y-2">
-                <p className="text-xs text-gray-400">
-                  Paste the link to your tailored resume for this application (Google Drive, Notion, PDF link, etc.). Claude will include it in the cover letter automatically.
-                </p>
-                <input
-                  type="url"
-                  className="input-field text-sm"
-                  value={resumeLink}
-                  onChange={e => setResumeLink(e.target.value)}
-                  placeholder="https://drive.google.com/file/your-tailored-resume"
-                />
-                <p className="text-xs text-gray-400 italic">
-                  Auto-filled from your Profile Setup portfolio URL. Update it here for a specific application without changing your profile.
-                </p>
-              </div>
-            )}
           </div>
 
           {analyzeError && <p className="text-red-500 text-sm">{analyzeError}</p>}
