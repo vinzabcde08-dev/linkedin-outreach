@@ -483,7 +483,7 @@ Return ONLY valid JSON — no markdown, no code fences:
 }`
 }
 
-function buildApplicationLetterPrompt(jobDescription, hiringManager, companyName, resumeData, profile) {
+function buildApplicationLetterPrompt(jobDescription, hiringManager, companyName, resumeData, profile, personalNotes, resumeLink) {
   const name     = profile?.fullName  || 'Vinz Betonio'
   const email    = profile?.email     || 'vinzabcde08@gmail.com'
   const phone    = profile?.phone     || '+63 968 266 7221'
@@ -525,22 +525,31 @@ Tools: ${tools}
 
 ## FULL RESUME DATA (for reference)
 ${JSON.stringify(resumeData, null, 2)}
-
+${personalNotes ? `
+## SPECIAL INSTRUCTIONS FROM APPLICANT — FOLLOW THESE CAREFULLY
+${personalNotes}
+` : ''}
 ## WRITING RULES — IMPORTANT, FOLLOW EXACTLY
-1. Use SIMPLE, CLEAR language — no corporate buzzwords, no jargon, no "I am writing to express my keen interest"
-2. Sound like a real person who is genuinely excited — warm, confident, direct
-3. Keep it SHORT and PUNCHY — no more than 4–5 paragraphs total
-4. Include a "What I can bring to this role:" section with 4–6 bullet points that directly match the job description
-5. Each bullet point should be SPECIFIC and CONCRETE — connect a real skill or experience to a specific job requirement
-6. The opening line must HOOK the reader — don't start with "I am applying for"
-7. Do NOT include a formal date or address header — start directly with "Dear ${hiringManager},"
-8. End with a confident but not pushy closing (1–2 sentences max), then the signature block
-9. Signature block format:
+1. FIRST LINE of the output must be the subject line in this format (no label, just the line):
+   Subject: [Role] – [One punchy hook, max 8 words]
+   Example: Subject: Executive Assistant Role – I Run Ops So You Don't Have To
+   Then a blank line, then "Dear ${hiringManager},"
+2. Use SIMPLE, CLEAR language — no corporate buzzwords, no jargon, no "I am writing to express my keen interest"
+3. Sound like a real person — warm, confident, direct. NOT a template.
+4. KEEP IT SHORT — 3 paragraphs MAX + bullet list. The whole letter (excluding subject line and signature) should be under 250 words. Shorter is better.
+   - Paragraph 1 (2–3 sentences): Hook + why you want this specific role at this specific company
+   - Bullet list (3–4 bullets MAX): "What I bring:" — each bullet one line, very specific, tied to a real job requirement
+   - Paragraph 2 (1–2 sentences): Confident close — express genuine interest, invite next step
+5. The opening line of Paragraph 1 must HOOK the reader — never start with "I am applying for" or "I am writing to"
+6. Do NOT include a formal date or address header — start directly with the subject line, then "Dear ${hiringManager},"
+7. End with the signature block — no fluff before it:
    ${name}
    ${phone}
-   ${email}${linkedinUrl ? `\n   ${linkedinUrl}` : ''}
+   ${email}${linkedinUrl ? `\n   ${linkedinUrl}` : ''}${resumeLink ? `
+   Resume: ${resumeLink}` : ''}
+8. ${resumeLink ? `REQUIRED — add one clean line at the end of Paragraph 2 (before the signature): "My tailored resume for this role: ${resumeLink}"` : 'No resume link — skip any resume link reference.'}
 
-Return ONLY the plain letter text — no markdown, no code fences, no extra commentary. Just the letter starting with "Dear ${hiringManager}," and ending with the signature.`
+Return ONLY the plain letter text — no markdown, no code fences, no extra commentary. Start with the Subject line, then a blank line, then "Dear ${hiringManager}," and end with the signature.`
 }
 
 function buildCarouselPrompt(topic, profile) {
@@ -1130,7 +1139,9 @@ Summarize everything you find in clear prose. Be specific — include URLs, name
           data.hiringManager || 'Hiring Manager',
           data.companyName   || 'your company',
           data.resumeData,
-          profile
+          profile,
+          data.personalNotes || '',
+          data.resumeLink    || ''
         )
         break
       case 'generateVideoScript':
