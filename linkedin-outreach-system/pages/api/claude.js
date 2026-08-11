@@ -530,6 +530,7 @@ ${personalNotes ? `
 ${personalNotes}
 ` : ''}
 ## WRITING RULES — IMPORTANT, FOLLOW EXACTLY
+0. NEVER use em-dashes (—) anywhere in the letter. Use a comma, period, or rewrite the sentence instead.
 1. FIRST LINE of the output must be the subject line in this format (no label, just the line):
    Subject: [Role] – [One punchy hook, max 8 words]
    Example: Subject: Executive Assistant Role – I Run Ops So You Don't Have To
@@ -547,7 +548,7 @@ ${personalNotes}
    ${phone}
    ${email}${linkedinUrl ? `\n   ${linkedinUrl}` : ''}${resumeLink ? `
    Resume: ${resumeLink}` : ''}
-8. ${resumeLink ? `REQUIRED — add one clean line at the end of Paragraph 2 (before the signature): "My tailored resume for this role: ${resumeLink}"` : 'No resume link — skip any resume link reference.'}
+8. ${resumeLink ? `The resume link goes ONLY in the signature block above — do NOT add a separate sentence about it anywhere in the letter body.` : 'No resume link — skip any resume link reference.'}
 
 Return ONLY the plain letter text — no markdown, no code fences, no extra commentary. Start with the Subject line, then a blank line, then "Dear ${hiringManager}," and end with the signature.`
 }
